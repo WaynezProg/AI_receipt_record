@@ -1,0 +1,159 @@
+# 環境變數檔案
+.env
+.env.local
+.env.production
+.env.staging
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# celery beat schedule file
+celerybeat-schedule
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 專案特定檔案
+# 資料目錄
+data/receipts/*
+data/output/*
+!data/receipts/.gitkeep
+!data/output/.gitkeep
+
+# 日誌檔案
+logs/
+*.log
+
+# 測試圖片
+test_receipt.jpg
+test_receipt.png
+test_receipt.pdf
+
+# 臨時檔案
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# 系統檔案
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# 快取檔案
+.cache/
+*.cache
+
+# 編譯檔案
+*.pyc
+*.pyo
+*.pyd
+
+# 虛擬環境
+.venv/
+venv/
+env/
+
+# 本地設定
+local_settings.py
+settings_local.py
+
+# 資料庫檔案
+*.db
+*.sqlite
+*.sqlite3
+
+# 備份檔案
+*.backup
+*.bak
+*.old
+
+# 壓縮檔案
+*.zip
+*.tar.gz
+*.rar
+
+# 其他
+*.pid
+*.seed
+*.pid.lock

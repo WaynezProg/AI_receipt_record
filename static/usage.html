@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Azure API 使用量監控</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .usage-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .usage-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            border-left: 4px solid #4facfe;
+        }
+
+        .usage-card.warning {
+            border-left-color: #ffc107;
+            background: #fff3cd;
+        }
+
+        .usage-card.danger {
+            border-left-color: #dc3545;
+            background: #f8d7da;
+        }
+
+        .usage-card h3 {
+            color: #495057;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+
+        .usage-card h3::before {
+            content: "📊";
+            margin-right: 10px;
+        }
+
+        .usage-number {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #4facfe;
+            margin-bottom: 5px;
+        }
+
+        .usage-label {
+            color: #6c757d;
+            font-size: 0.9em;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            transition: width 0.3s ease;
+        }
+
+        .progress-fill.warning {
+            background: linear-gradient(135deg, #ffc107 0%, #ff8c00 100%);
+        }
+
+        .progress-fill.danger {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        }
+
+        .chart-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .chart-section h3 {
+            color: #495057;
+            margin-bottom: 15px;
+        }
+
+        .chart-container {
+            height: 300px;
+            position: relative;
+        }
+
+        .recent-calls {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .recent-calls h3 {
+            color: #495057;
+            margin-bottom: 15px;
+        }
+
+        .call-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .call-item:last-child {
+            border-bottom: none;
+        }
+
+        .call-time {
+            color: #6c757d;
+            font-size: 0.9em;
+        }
+
+        .call-details {
+            text-align: right;
+        }
+
+        .call-size {
+            color: #495057;
+            font-weight: bold;
+        }
+
+        .call-success {
+            color: #28a745;
+        }
+
+        .call-failed {
+            color: #dc3545;
+        }
+
+        .warnings {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .warnings h3 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+
+        .warning-item {
+            color: #856404;
+            margin-bottom: 5px;
+        }
+
+        .limits-info {
+            background: #e3f2fd;
+            border: 1px solid #bbdefb;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .limits-info h3 {
+            color: #1976d2;
+            margin-bottom: 10px;
+        }
+
+        .limit-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+
+        .limit-label {
+            color: #1976d2;
+        }
+
+        .limit-value {
+            color: #495057;
+            font-weight: bold;
+        }
+
+        .refresh-btn {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1em;
+            margin-bottom: 20px;
+        }
+
+        .refresh-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(79, 172, 254, 0.4);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4facfe;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 Azure API 使用量監控</h1>
+            <p>監控 Azure Computer Vision API 的使用量和成本</p>
+        </div>
+
+        <div class="content">
+            <button class="refresh-btn" onclick="loadUsageData()">🔄 重新整理</button>
+
+            <div id="loading" class="loading">
+                <div class="spinner"></div>
+                <p>載入使用量資料中...</p>
+            </div>
+
+            <div id="content" style="display: none;">
+                <!-- 警告區域 -->
+                <div id="warnings" class="warnings" style="display: none;">
+                    <h3>⚠️ 使用量警告</h3>
+                    <div id="warningList"></div>
+                </div>
+
+                <!-- 限制資訊 -->
+                <div class="limits-info">
+                    <h3>📋 Azure API 限制</h3>
+                    <div class="limit-item">
+                        <span class="limit-label">免費額度：</span>
+                        <span class="limit-value">每月 5,000 次交易</span>
+                    </div>
+                    <div class="limit-item">
+                        <span class="limit-label">請求頻率：</span>
+                        <span class="limit-value">每分鐘最多 20 次</span>
+                    </div>
+                    <div class="limit-item">
+                        <span class="limit-label">圖片大小：</span>
+                        <span class="limit-value">最大 4MB</span>
+                    </div>
+                    <div class="limit-item">
+                        <span class="limit-label">支援格式：</span>
+                        <span class="limit-value">JPEG, PNG, GIF, BMP</span>
+                    </div>
+                </div>
+
+                <!-- 使用量統計 -->
+                <div class="usage-grid" id="usageGrid"></div>
+
+                <!-- 每日使用量圖表 -->
+                <div class="chart-section">
+                    <h3>📈 每日使用量趨勢</h3>
+                    <div class="chart-container" id="dailyChart"></div>
+                </div>
+
+                <!-- 最近API調用 -->
+                <div class="recent-calls">
+                    <h3>🕒 最近API調用記錄</h3>
+                    <div id="recentCalls"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function loadUsageData() {
+            const loading = document.getElementById('loading');
+            const content = document.getElementById('content');
+            
+            loading.style.display = 'block';
+            content.style.display = 'none';
+
+            try {
+                const response = await fetch('/usage');
+                const data = await response.json();
+                
+                displayUsageData(data);
+            } catch (error) {
+                console.error('載入使用量資料失敗:', error);
+                alert('載入使用量資料失敗: ' + error.message);
+            } finally {
+                loading.style.display = 'none';
+                content.style.display = 'block';
+            }
+        }
+
+        function displayUsageData(data) {
+            const summary = data.summary;
+            
+            // 顯示警告
+            displayWarnings(summary.warnings);
+            
+            // 顯示使用量統計
+            displayUsageStats(summary);
+            
+            // 顯示每日圖表
+            displayDailyChart(data.daily_chart);
+            
+            // 顯示最近調用
+            displayRecentCalls(data.recent_calls);
+        }
+
+        function displayWarnings(warnings) {
+            const warningsDiv = document.getElementById('warnings');
+            const warningList = document.getElementById('warningList');
+            
+            if (warnings.length > 0) {
+                warningList.innerHTML = warnings.map(warning => 
+                    `<div class="warning-item">• ${warning}</div>`
+                ).join('');
+                warningsDiv.style.display = 'block';
+            } else {
+                warningsDiv.style.display = 'none';
+            }
+        }
+
+        function displayUsageStats(summary) {
+            const usageGrid = document.getElementById('usageGrid');
+            
+            const usageCards = [
+                {
+                    title: '月度使用量',
+                    value: summary.monthly_usage,
+                    total: summary.monthly_limit,
+                    unit: '次',
+                    percentage: summary.monthly_percentage,
+                    warning: summary.monthly_percentage >= 80
+                },
+                {
+                    title: '剩餘額度',
+                    value: summary.monthly_remaining,
+                    unit: '次',
+                    color: summary.monthly_remaining < 1000 ? '#dc3545' : '#4facfe'
+                },
+                {
+                    title: '今日使用量',
+                    value: summary.today_usage,
+                    unit: '次'
+                },
+                {
+                    title: '本小時使用量',
+                    value: summary.current_hour_usage,
+                    unit: '次'
+                },
+                {
+                    title: '估算成本',
+                    value: `$${summary.total_cost_estimate}`,
+                    unit: ''
+                },
+                {
+                    title: '最後重置',
+                    value: new Date(summary.last_reset).toLocaleDateString('zh-TW'),
+                    unit: ''
+                }
+            ];
+            
+            usageGrid.innerHTML = usageCards.map(card => {
+                const warningClass = card.warning ? 'warning' : '';
+                const progressBar = card.total ? `
+                    <div class="progress-bar">
+                        <div class="progress-fill ${card.warning ? 'warning' : ''}" 
+                             style="width: ${card.percentage}%"></div>
+                    </div>
+                    <div class="usage-label">${card.value} / ${card.total} ${card.unit} (${card.percentage}%)</div>
+                ` : `
+                    <div class="usage-label">${card.value} ${card.unit}</div>
+                `;
+                
+                return `
+                    <div class="usage-card ${warningClass}">
+                        <h3>${card.title}</h3>
+                        <div class="usage-number" style="color: ${card.color || '#4facfe'}">${card.value}</div>
+                        ${progressBar}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function displayDailyChart(chartData) {
+            const chartContainer = document.getElementById('dailyChart');
+            
+            // 簡單的條形圖
+            const maxValue = Math.max(...chartData.data, 1);
+            const barHeight = 280 / chartData.data.length;
+            
+            chartContainer.innerHTML = `
+                <div style="display: flex; align-items: end; height: 100%; gap: 10px;">
+                    ${chartData.data.map((value, index) => {
+                        const height = (value / maxValue) * 280;
+                        const color = value > 0 ? '#4facfe' : '#e9ecef';
+                        return `
+                            <div style="flex: 1; display: flex; flex-direction: column; align-items: center;">
+                                <div style="
+                                    width: 100%;
+                                    height: ${height}px;
+                                    background: ${color};
+                                    border-radius: 4px 4px 0 0;
+                                    margin-bottom: 10px;
+                                "></div>
+                                <div style="font-size: 0.8em; color: #6c757d; text-align: center;">
+                                    ${chartData.labels[index]}
+                                </div>
+                                <div style="font-size: 0.8em; color: #495057; font-weight: bold;">
+                                    ${value}
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+        }
+
+        function displayRecentCalls(calls) {
+            const recentCalls = document.getElementById('recentCalls');
+            
+            if (calls.length === 0) {
+                recentCalls.innerHTML = '<p style="color: #6c757d; text-align: center;">尚無API調用記錄</p>';
+                return;
+            }
+            
+            recentCalls.innerHTML = calls.map(call => {
+                const time = new Date(call.timestamp).toLocaleString('zh-TW');
+                const successClass = call.success ? 'call-success' : 'call-failed';
+                const successText = call.success ? '成功' : '失敗';
+                
+                return `
+                    <div class="call-item">
+                        <div class="call-time">${time}</div>
+                        <div class="call-details">
+                            <div class="call-size">${call.image_size_mb}MB</div>
+                            <div class="${successClass}">${successText}</div>
+                            <div style="font-size: 0.8em; color: #6c757d;">${call.processing_time}秒</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // 頁面載入時自動載入資料
+        window.addEventListener('load', loadUsageData);
+        
+        // 每30秒自動更新
+        setInterval(loadUsageData, 30000);
+    </script>
+</body>
+</html>

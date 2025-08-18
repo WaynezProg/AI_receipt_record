@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>前端測試</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ccc; }
+        button { padding: 10px 20px; margin: 5px; }
+        .result { margin: 10px 0; padding: 10px; background: #f0f0f0; }
+        .error { color: red; }
+        .success { color: green; }
+    </style>
+</head>
+<body>
+    <h1>前端功能測試</h1>
+    
+    <div class="test-section">
+        <h2>1. 健康檢查測試</h2>
+        <button onclick="testHealth()">測試健康檢查</button>
+        <div id="health-result" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. 上傳測試</h2>
+        <input type="file" id="testFile" accept="image/*">
+        <button onclick="testUpload()">測試上傳</button>
+        <div id="upload-result" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. 處理測試</h2>
+        <button onclick="testProcess()">測試處理</button>
+        <div id="process-result" class="result"></div>
+    </div>
+
+    <script>
+        let uploadedFilename = null;
+
+        async function testHealth() {
+            const resultDiv = document.getElementById('health-result');
+            try {
+                const response = await fetch('/health');
+                const data = await response.json();
+                resultDiv.innerHTML = `<div class="success">✅ 健康檢查成功: ${JSON.stringify(data)}</div>`;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ 健康檢查失敗: ${error.message}</div>`;
+            }
+        }
+
+        async function testUpload() {
+            const fileInput = document.getElementById('testFile');
+            const resultDiv = document.getElementById('upload-result');
+            
+            if (!fileInput.files[0]) {
+                resultDiv.innerHTML = '<div class="error">❌ 請選擇檔案</div>';
+                return;
+            }
+
+            try {
+                const formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    uploadedFilename = result.filename;
+                    resultDiv.innerHTML = `<div class="success">✅ 上傳成功: ${result.filename}</div>`;
+                } else {
+                    resultDiv.innerHTML = `<div class="error">❌ 上傳失敗: ${result.detail}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ 上傳錯誤: ${error.message}</div>`;
+            }
+        }
+
+        async function testProcess() {
+            const resultDiv = document.getElementById('process-result');
+            
+            if (!uploadedFilename) {
+                resultDiv.innerHTML = '<div class="error">❌ 請先上傳檔案</div>';
+                return;
+            }
+
+            try {
+                const formData = new FormData();
+                formData.append('filename', uploadedFilename);
+                formData.append('enhance_image', 'true');
+                formData.append('save_detailed_csv', 'true');
+
+                console.log('發送處理請求:', uploadedFilename);
+
+                const response = await fetch('/process', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                console.log('回應狀態:', response.status);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                console.log('處理結果:', result);
+
+                if (result.success) {
+                    const data = result.data;
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            ✅ 處理成功！<br>
+                            商店名稱: ${data.store_name}<br>
+                            總金額: ¥${data.total_amount}<br>
+                            商品數量: ${data.items.length}項<br>
+                            處理時間: ${data.processing_time.toFixed(2)}秒<br>
+                            信心度: ${(data.confidence_score * 100).toFixed(1)}%
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<div class="error">❌ 處理失敗: ${result.error}</div>`;
+                }
+            } catch (error) {
+                console.error('處理錯誤:', error);
+                resultDiv.innerHTML = `<div class="error">❌ 處理錯誤: ${error.message}</div>`;
+            }
+        }
+    </script>
+</body>
+</html>
