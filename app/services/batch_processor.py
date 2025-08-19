@@ -3,6 +3,7 @@
 """
 
 import asyncio
+import os
 import time
 import uuid
 from typing import List, Dict, Optional
@@ -321,11 +322,11 @@ class BatchProcessor:
                 if not os.path.exists(file_path):
                     raise FileNotFoundError(f"檔案不存在: {filename}")
                 
-                validate_image(file_path)
+                image_utils.validate_image(file_path)
                 
                 # 增強圖片品質
                 if enhance_image:
-                    enhanced_path = enhance_image_quality(file_path)
+                    enhanced_path = image_utils.enhance_image_quality(file_path)
                     process_path = enhanced_path
                 else:
                     process_path = file_path
