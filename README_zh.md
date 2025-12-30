@@ -1,5 +1,9 @@
 # 📄 日本收據AI識別系統
 
+[![Demo Video](https://img.youtube.com/vi/Ur5AVAt0oT4/0.jpg)](https://youtu.be/Ur5AVAt0oT4)
+
+> 💡 **點擊上圖觀看完整示範影片**，展示應用程式的完整工作流程。
+
 > 🇬🇧 [English Version](./README.md) | 🇹🇼 [繁體中文版本](./README_zh.md)
 
 一個基於AI的日本收據識別和數據提取系統，能夠自動處理收據圖片並生成結構化的CSV數據。

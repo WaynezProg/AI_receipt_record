@@ -1,8 +1,12 @@
 # 📄 Japanese Receipt AI Recognition System
 
+[![Demo Video](https://img.youtube.com/vi/Ur5AVAt0oT4/0.jpg)](https://youtu.be/Ur5AVAt0oT4)
+
+> 💡 **Click the image above to watch the full demo video** showing the complete workflow of the application.
+
 > 🇹🇼 [繁體中文版本](./README_zh.md) | 🇬🇧 [English Version](./README.md)
 
-An AI-based Japanese receipt recognition and data extraction system that automatically processes receipt images and generates structured CSV data.
+An AI-based Japanese receipt recognition and data extraction system that automatically processes receipt images and generates structured CSV data. It uses Azure Computer Vision API for text recognition and Claude AI for structured data extraction.
 
 ## 🚀 Quick Start
 
