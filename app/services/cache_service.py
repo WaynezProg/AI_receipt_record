@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """
+Cache service - Manages OCR results and processing status
 暫存服務 - 管理OCR結果和處理狀態
 """
 
@@ -13,31 +14,38 @@ from app.models.receipt import ReceiptData
 
 
 class CacheService:
-    """暫存服務，管理OCR結果和處理狀態"""
+    """
+    Cache service that manages OCR results and processing status
+    暫存服務，管理OCR結果和處理狀態
+    """
 
     def __init__(self, cache_dir: str = "./data/cache"):
         self.cache_dir = cache_dir
         self._ensure_cache_dir()
 
     def _ensure_cache_dir(self):
-        """確保暫存目錄存在"""
+        """
+        Ensure cache directory exists
+        確保暫存目錄存在
+        """
         if not os.path.exists(self.cache_dir):
             os.makedirs(self.cache_dir)
-            logger.info(f"創建暫存目錄: {self.cache_dir}")
+            logger.info(f"Created cache directory: {self.cache_dir} / 創建暫存目錄: {self.cache_dir}")
 
     def save_ocr_result(self, filename: str, ocr_data: Dict[str, Any]) -> str:
         """
+        Save OCR result to cache file
         儲存OCR結果到暫存檔案
 
         Args:
-            filename: 原始檔案名稱
-            ocr_data: OCR結果資料
+            filename: Original file name / 原始檔案名稱
+            ocr_data: OCR result data / OCR結果資料
 
         Returns:
-            暫存檔案路徑
+            Cache file path / 暫存檔案路徑
         """
         try:
-            # 創建暫存資料
+            # Create cache data / 創建暫存資料
             cache_data = {
                 "filename": filename,
                 "ocr_data": ocr_data,
@@ -45,66 +53,68 @@ class CacheService:
                 "status": "ocr_completed",
             }
 
-            # 生成暫存檔案名稱
+            # Generate cache filename / 生成暫存檔案名稱
             cache_filename = f"ocr_{filename}_{int(time.time())}.json"
             cache_path = os.path.join(self.cache_dir, cache_filename)
 
-            # 儲存到JSON檔案
+            # Save to JSON file / 儲存到JSON檔案
             with open(cache_path, "w", encoding="utf-8") as f:
                 json.dump(cache_data, f, ensure_ascii=False, indent=2)
 
-            logger.info(f"OCR結果已暫存: {cache_path}")
+            logger.info(f"OCR result cached: {cache_path} / OCR結果已暫存: {cache_path}")
             return cache_path
 
         except Exception as e:
-            logger.error(f"儲存OCR結果失敗: {str(e)}")
+            logger.error(f"Failed to save OCR result: {str(e)} / 儲存OCR結果失敗: {str(e)}")
             raise
 
     def load_ocr_result(self, filename_or_path: str) -> Optional[Dict[str, Any]]:
         """
+        Load OCR result from cache file
         從暫存檔案載入OCR結果
 
         Args:
-            filename_or_path: 原始檔案名稱或暫存檔案路徑
+            filename_or_path: Original file name or cache file path / 原始檔案名稱或暫存檔案路徑
 
         Returns:
-            OCR結果資料
+            OCR result data / OCR結果資料
         """
         try:
-            # 如果是完整路徑，直接使用
+            # If it's a full path, use it directly / 如果是完整路徑，直接使用
             if os.path.isabs(filename_or_path) or filename_or_path.startswith("./"):
                 cache_path = filename_or_path
             else:
-                # 如果是檔案名稱，查找對應的暫存檔案
+                # If it's a filename, find the corresponding cache file / 如果是檔案名稱，查找對應的暫存檔案
                 cache_path = self._find_cache_file(filename_or_path)
                 if not cache_path:
-                    logger.warning(f"找不到對應的暫存檔案: {filename_or_path}")
+                    logger.warning(f"Cache file not found: {filename_or_path} / 找不到對應的暫存檔案: {filename_or_path}")
                     return None
 
             if not os.path.exists(cache_path):
-                logger.warning(f"暫存檔案不存在: {cache_path}")
+                logger.warning(f"Cache file does not exist: {cache_path} / 暫存檔案不存在: {cache_path}")
                 return None
 
             with open(cache_path, "r", encoding="utf-8") as f:
                 cache_data = json.load(f)
 
-            logger.info(f"載入OCR結果: {cache_path}")
+            logger.info(f"Loaded OCR result: {cache_path} / 載入OCR結果: {cache_path}")
             return cache_data
 
         except Exception as e:
-            logger.error(f"載入OCR結果失敗: {str(e)}")
+            logger.error(f"Failed to load OCR result: {str(e)} / 載入OCR結果失敗: {str(e)}")
             return None
 
     def _find_cache_file(self, filename: str, cache_type: str = "ocr") -> Optional[str]:
         """
+        Find corresponding cache file based on original file name
         根據原始檔案名稱查找對應的暫存檔案
 
         Args:
-            filename: 原始檔案名稱
-            cache_type: 暫存類型 ("ocr" 或 "ai")
+            filename: Original file name / 原始檔案名稱
+            cache_type: Cache type ("ocr" or "ai") / 暫存類型 ("ocr" 或 "ai")
 
         Returns:
-            暫存檔案路徑，如果找不到則返回None
+            Cache file path, or None if not found / 暫存檔案路徑，如果找不到則返回None
         """
         try:
             # 查找以 "{cache_type}_{filename}_" 開頭的暫存檔案

@@ -9,28 +9,35 @@ from app.models.receipt import ReceiptData, ReceiptItem
 
 
 class CSVService:
-    """CSV檔案處理服務"""
+    """
+    CSV file processing service
+    CSV檔案處理服務
+    """
 
     def __init__(self):
         self.output_dir = settings.output_dir
         self._ensure_output_dir()
 
     def _ensure_output_dir(self):
-        """確保輸出目錄存在"""
+        """
+        Ensure output directory exists
+        確保輸出目錄存在
+        """
         os.makedirs(self.output_dir, exist_ok=True)
 
     def save_receipt_to_csv(
         self, receipt_data: ReceiptData, filename: str = None
     ) -> str:
         """
+        Save single receipt data to CSV file
         將單個收據資料儲存到CSV檔案
 
         Args:
-            receipt_data: 收據資料
-            filename: 檔案名稱（可選）
+            receipt_data: Receipt data / 收據資料
+            filename: File name (optional) / 檔案名稱（可選）
 
         Returns:
-            CSV檔案路徑
+            CSV file path / CSV檔案路徑
         """
         try:
             if not filename:

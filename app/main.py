@@ -20,17 +20,17 @@ from app.services.optimized_batch_processor import optimized_batch_processor
 from app.services.cache_service import cache_service
 from app.utils.image_utils import image_utils
 
-# 配置日誌
+# Configure logging / 配置日誌
 logger.add("logs/app.log", rotation="1 day", retention="7 days", level="INFO")
 
-# 創建FastAPI應用
+# Create FastAPI application / 創建FastAPI應用
 app = FastAPI(
     title="日本收據識別系統",
     description="基於OCR + AI的日本收據識別和CSV輸出系統",
     version="1.0.0",
 )
 
-# 添加CORS中間件
+# Add CORS middleware / 添加CORS中間件
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -39,19 +39,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 確保目錄存在
+# Ensure directories exist / 確保目錄存在
 os.makedirs(settings.upload_dir, exist_ok=True)
 os.makedirs(settings.output_dir, exist_ok=True)
 os.makedirs("logs", exist_ok=True)
 os.makedirs("static", exist_ok=True)
 
-# 掛載靜態檔案
+# Mount static files / 掛載靜態檔案
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 @app.get("/", response_class=HTMLResponse)
 async def root():
-    """根端點 - 返回Web介面"""
+    """
+    Root endpoint - Returns web interface
+    根端點 - 返回Web介面
+    """
     try:
         with open("static/index.html", "r", encoding="utf-8") as f:
             return HTMLResponse(content=f.read())
@@ -72,7 +75,10 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    """健康檢查端點"""
+    """
+    Health check endpoint
+    健康檢查端點
+    """
     return {
         "status": "healthy",
         "timestamp": datetime.now().isoformat(),
@@ -83,9 +89,11 @@ async def health_check():
 @app.get("/api-status")
 async def check_api_status():
     """
+    Check API configuration status
     檢查 API 配置狀態
 
     Returns:
+        API configuration status and diagnostic information
         API 配置狀態和診斷資訊
     """
     status = {
@@ -109,13 +117,13 @@ async def check_api_status():
         }
     }
     
-    # 嘗試解析 Azure 端點（不實際連接，只檢查格式）
+    # Try to parse Azure endpoint (no actual connection, only format check) / 嘗試解析 Azure 端點（不實際連接，只檢查格式）
     if settings.azure_vision_endpoint:
         endpoint = settings.azure_vision_endpoint.strip().rstrip("/")
         if not endpoint.startswith("https://"):
-            status["azure_vision"]["warning"] = "端點 URL 應該以 https:// 開頭"
+            status["azure_vision"]["warning"] = "Endpoint URL should start with https:// / 端點 URL 應該以 https:// 開頭"
         elif not endpoint.endswith(".cognitiveservices.azure.com"):
-            status["azure_vision"]["warning"] = "端點 URL 格式可能不正確（應包含 .cognitiveservices.azure.com）"
+            status["azure_vision"]["warning"] = "Endpoint URL format may be incorrect (should include .cognitiveservices.azure.com) / 端點 URL 格式可能不正確（應包含 .cognitiveservices.azure.com）"
         else:
             status["azure_vision"]["endpoint_valid"] = True
     
@@ -125,40 +133,41 @@ async def check_api_status():
 @app.post("/upload", response_model=dict)
 async def upload_receipt(file: UploadFile = File(...)):
     """
+    Upload receipt image
     上傳收據圖片
 
     Args:
-        file: 上傳的圖片檔案
+        file: Uploaded image file / 上傳的圖片檔案
 
     Returns:
-        上傳結果
+        Upload result / 上傳結果
     """
     try:
-        # 驗證檔案格式
+        # Validate file format / 驗證檔案格式
         allowed_extensions = settings.allowed_extensions_list
         file_ext = file.filename.split(".")[-1].lower()
 
         if file_ext not in allowed_extensions:
             raise HTTPException(
                 status_code=400,
-                detail=f"不支援的檔案格式。支援的格式: {', '.join(allowed_extensions)}",
+                detail=f"Unsupported file format. Supported formats: {', '.join(allowed_extensions)} / 不支援的檔案格式。支援的格式: {', '.join(allowed_extensions)}",
             )
 
-        # 生成檔案名稱（添加微秒避免重複）
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:-3]  # 包含毫秒
+        # Generate filename (add microseconds to avoid duplicates) / 生成檔案名稱（添加微秒避免重複）
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:-3]  # Include milliseconds / 包含毫秒
         filename = f"receipt_{timestamp}.{file_ext}"
         file_path = os.path.join(settings.upload_dir, filename)
 
-        # 儲存檔案
+        # Save file / 儲存檔案
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
 
-        # 驗證圖片
+        # Validate image / 驗證圖片
         if not image_utils.validate_image(file_path, settings.max_file_size):
-            os.remove(file_path)  # 刪除無效檔案
-            raise HTTPException(status_code=400, detail="無效的圖片檔案")
+            os.remove(file_path)  # Delete invalid file / 刪除無效檔案
+            raise HTTPException(status_code=400, detail="Invalid image file / 無效的圖片檔案")
 
-        logger.info(f"圖片上傳成功: {filename}")
+        logger.info(f"Image upload successful: {filename} / 圖片上傳成功: {filename}")
 
         return {
             "success": True,
@@ -171,8 +180,8 @@ async def upload_receipt(file: UploadFile = File(...)):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"圖片上傳失敗: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"上傳失敗: {str(e)}")
+        logger.error(f"Image upload failed: {str(e)} / 圖片上傳失敗: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)} / 上傳失敗: {str(e)}")
 
 
 @app.post("/upload-batch")
@@ -192,7 +201,7 @@ async def upload_batch_receipts(files: List[UploadFile] = File(...)):
 
         for file_index, file in enumerate(files):
             try:
-                # 驗證檔案格式
+                # Validate file format / 驗證檔案格式
                 allowed_extensions = settings.allowed_extensions_list
                 file_ext = file.filename.split(".")[-1].lower()
 
@@ -200,17 +209,17 @@ async def upload_batch_receipts(files: List[UploadFile] = File(...)):
                     failed_files.append(
                         {
                             "filename": file.filename,
-                            "error": f"不支援的檔案格式。支援的格式: {', '.join(allowed_extensions)}",
+                            "error": f"Unsupported file format. Supported formats: {', '.join(allowed_extensions)} / 不支援的檔案格式。支援的格式: {', '.join(allowed_extensions)}",
                         }
                     )
                     continue
 
-                # 生成檔案名稱（添加索引避免重複）
+                # Generate filename (add index to avoid duplicates) / 生成檔案名稱（添加索引避免重複）
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                 filename = f"receipt_{timestamp}_{file_index:03d}.{file_ext}"
                 file_path = os.path.join(settings.upload_dir, filename)
 
-                # 儲存檔案
+                # Save file / 儲存檔案
                 with open(file_path, "wb") as buffer:
                     shutil.copyfileobj(file.file, buffer)
                     buffer.flush()
@@ -218,31 +227,31 @@ async def upload_batch_receipts(files: List[UploadFile] = File(...)):
                         try:
                             os.fsync(buffer.fileno())
                         except:
-                            pass  # 某些系統可能不支援 fsync
+                            pass  # Some systems may not support fsync / 某些系統可能不支援 fsync
 
-                # 驗證檔案是否存在（等待一小段時間確保檔案已寫入）
+                # Verify file exists (wait a short time to ensure file is written) / 驗證檔案是否存在（等待一小段時間確保檔案已寫入）
                 import time
-                time.sleep(0.01)  # 短暫延遲確保檔案系統同步
+                time.sleep(0.01)  # Brief delay to ensure filesystem sync / 短暫延遲確保檔案系統同步
                 
                 if not os.path.exists(file_path):
                     failed_files.append(
-                        {"filename": file.filename, "error": "檔案儲存失敗"}
+                        {"filename": file.filename, "error": "File save failed / 檔案儲存失敗"}
                     )
-                    logger.error(f"檔案不存在: {file_path}")
+                    logger.error(f"File does not exist: {file_path} / 檔案不存在: {file_path}")
                     continue
 
-                # 驗證圖片（PDF 檔案跳過圖片驗證）
+                # Validate image (PDF files skip image validation) / 驗證圖片（PDF 檔案跳過圖片驗證）
                 if file_ext.lower() != "pdf":
                     if not image_utils.validate_image(file_path, settings.max_file_size):
                         if os.path.exists(file_path):
-                            os.remove(file_path)  # 刪除無效檔案
+                            os.remove(file_path)  # Delete invalid file / 刪除無效檔案
                         failed_files.append(
-                            {"filename": file.filename, "error": "無效的圖片檔案"}
+                            {"filename": file.filename, "error": "Invalid image file / 無效的圖片檔案"}
                         )
                         continue
 
                 uploaded_files.append(filename)
-                logger.info(f"批量上傳成功: {filename}")
+                logger.info(f"Batch upload successful: {filename} / 批量上傳成功: {filename}")
 
             except Exception as e:
                 failed_files.append({"filename": file.filename, "error": str(e)})
@@ -270,25 +279,26 @@ async def process_receipt(
     save_detailed_csv: bool = Form(False),
 ):
     """
+    Process receipt recognition
     處理收據識別
 
     Args:
-        filename: 圖片檔案名稱
-        background_tasks: 背景任務
-        enhance_image: 是否增強圖片品質
-        save_detailed_csv: 是否儲存詳細CSV
+        filename: Image file name / 圖片檔案名稱
+        background_tasks: Background tasks / 背景任務
+        enhance_image: Whether to enhance image quality / 是否增強圖片品質
+        save_detailed_csv: Whether to save detailed CSV / 是否儲存詳細CSV
 
     Returns:
-        識別結果
+        Recognition result / 識別結果
     """
     try:
         start_time = time.time()
 
-        # 構建檔案路徑
+        # Build file path / 構建檔案路徑
         file_path = os.path.join(settings.upload_dir, filename)
 
         if not os.path.exists(file_path):
-            raise HTTPException(status_code=404, detail="檔案不存在")
+            raise HTTPException(status_code=404, detail="File not found / 檔案不存在")
 
         # 圖片預處理
         processed_image_path = file_path

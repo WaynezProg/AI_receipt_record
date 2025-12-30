@@ -8,7 +8,10 @@ from app.models.receipt import ReceiptData, ReceiptItem
 
 
 class AIService:
-    """Claude AI服務，用於文字整理和結構化"""
+    """
+    Claude AI service for text organization and structuring
+    Claude AI服務，用於文字整理和結構化
+    """
 
     def __init__(self):
         self.api_key = settings.claude_api_key
@@ -19,53 +22,59 @@ class AIService:
             "content-type": "application/json",
         }
 
-        # 檢查是否為測試模式
+        # Check if in test mode / 檢查是否為測試模式
         self.test_mode = "your_claude_api_key_here" in self.api_key
 
         if self.test_mode:
-            logger.warning("🔧 AI服務運行在測試模式 - 使用模擬數據")
+            logger.warning("🔧 AI service running in test mode - using mock data / AI服務運行在測試模式 - 使用模擬數據")
 
     async def process_receipt_text(
         self, ocr_data: Dict, structured_data: Dict
     ) -> ReceiptData:
-        """使用AI處理收據文字並結構化資料"""
+        """
+        Process receipt text using AI and structure the data
+        使用AI處理收據文字並結構化資料
+        """
         if self.test_mode:
             return self._get_mock_receipt_data(ocr_data, structured_data)
 
         try:
-            # 構建提示詞
+            # Build prompt / 構建提示詞
             prompt = self._build_receipt_prompt(ocr_data, structured_data)
 
-            # 調用Claude API
+            # Call Claude API / 調用Claude API
             response_text = await self._call_claude_api(prompt)
 
-            # 解析回應
+            # Parse response / 解析回應
             receipt_data = self._parse_ai_response(response_text, ocr_data)
 
-            logger.info("AI處理完成")
+            logger.info("AI processing completed / AI處理完成")
             return receipt_data
 
         except Exception as e:
-            logger.error(f"AI處理失敗: {str(e)}")
+            logger.error(f"AI processing failed: {str(e)} / AI處理失敗: {str(e)}")
             raise
 
     def _get_mock_receipt_data(
         self, ocr_data: Dict, structured_data: Dict
     ) -> ReceiptData:
-        """返回模擬的收據數據"""
-        logger.info("使用模擬AI數據")
+        """
+        Return mock receipt data
+        返回模擬的收據數據
+        """
+        logger.info("Using mock AI data / 使用模擬AI數據")
 
-        # 從OCR數據中提取信息
+        # Extract information from OCR data / 從OCR數據中提取信息
         text = ocr_data.get("text", "")
         numbers = structured_data.get("numbers", [])
         dates = structured_data.get("dates", [])
         times = structured_data.get("times", [])
         store_names = structured_data.get("store_names", [])
 
-        # 創建模擬收據數據
+        # Create mock receipt data / 創建模擬收據數據
         from datetime import datetime
 
-        # 解析日期和時間
+        # Parse date and time / 解析日期和時間
         receipt_date = datetime.now()
         if dates:
             try:
@@ -77,7 +86,7 @@ class AIService:
         if times:
             receipt_time = times[0]
 
-        # 解析商品項目
+        # Parse item list / 解析商品項目
         items = []
         lines = text.split("\n")
         for line in lines:

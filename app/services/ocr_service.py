@@ -10,9 +10,13 @@ from app.services.azure_usage_tracker import azure_usage_tracker
 
 
 class OCRService:
-    """Azure Computer Vision OCR服務"""
+    """
+    Azure Computer Vision OCR service
+    Azure Computer Vision OCR服務
+    """
 
     def __init__(self):
+        # Clean endpoint URL: remove trailing slash to ensure correct URL format
         # 清理端點URL：移除尾隨斜線，確保URL格式正確
         endpoint = settings.azure_vision_endpoint.strip()
         self.endpoint = endpoint.rstrip("/")
@@ -22,7 +26,7 @@ class OCRService:
             "Content-Type": "application/octet-stream",
         }
 
-        # 檢查是否為測試模式
+        # Check if in test mode / 檢查是否為測試模式
         self.test_mode = (
             "your-resource.cognitiveservices.azure.com" in self.endpoint
             or "your_azure_vision_key_here" in self.key
@@ -31,16 +35,18 @@ class OCRService:
         )
 
         if self.test_mode:
-            logger.warning("🔧 OCR服務運行在測試模式 - 使用模擬數據")
+            logger.warning("🔧 OCR service running in test mode - using mock data / OCR服務運行在測試模式 - 使用模擬數據")
 
     async def extract_text(self, image_path: str) -> Dict:
         """
+        Extract text from image
         從圖片中提取文字
 
         Args:
-            image_path: 圖片檔案路徑
+            image_path: Image file path / 圖片檔案路徑
 
         Returns:
+            Dictionary containing text and position information
             包含文字和位置資訊的字典
         """
         if self.test_mode:
