@@ -9,6 +9,7 @@ import time
 from datetime import datetime
 from typing import Dict, List, Optional, Any
 from loguru import logger
+from app.models.receipt import ReceiptData
 
 
 class CacheService:
@@ -94,19 +95,20 @@ class CacheService:
             logger.error(f"載入OCR結果失敗: {str(e)}")
             return None
 
-    def _find_cache_file(self, filename: str) -> Optional[str]:
+    def _find_cache_file(self, filename: str, cache_type: str = "ocr") -> Optional[str]:
         """
         根據原始檔案名稱查找對應的暫存檔案
 
         Args:
             filename: 原始檔案名稱
+            cache_type: 暫存類型 ("ocr" 或 "ai")
 
         Returns:
             暫存檔案路徑，如果找不到則返回None
         """
         try:
-            # 查找以 "ocr_{filename}_" 開頭的暫存檔案
-            cache_prefix = f"ocr_{filename}_"
+            # 查找以 "{cache_type}_{filename}_" 開頭的暫存檔案
+            cache_prefix = f"{cache_type}_{filename}_"
 
             for cache_filename in os.listdir(self.cache_dir):
                 if cache_filename.startswith(cache_prefix) and cache_filename.endswith(
@@ -118,6 +120,85 @@ class CacheService:
 
         except Exception as e:
             logger.error(f"查找暫存檔案失敗: {str(e)}")
+            return None
+
+    def save_ai_result(self, filename: str, receipt_data: ReceiptData, ocr_result: Dict[str, Any]) -> str:
+        """
+        儲存AI處理結果到暫存檔案
+
+        Args:
+            filename: 原始檔案名稱
+            receipt_data: ReceiptData 對象
+            ocr_result: OCR結果資料（用於關聯）
+
+        Returns:
+            暫存檔案路徑
+        """
+        try:
+            # 將ReceiptData轉換為字典（使用Pydantic的dict方法）
+            if hasattr(receipt_data, 'dict'):
+                # Pydantic v1
+                receipt_dict = receipt_data.dict()
+            elif hasattr(receipt_data, 'model_dump'):
+                # Pydantic v2
+                receipt_dict = receipt_data.model_dump()
+            else:
+                # 如果已經是字典，直接使用
+                receipt_dict = receipt_data
+
+            # 創建暫存資料
+            cache_data = {
+                "filename": filename,
+                "receipt_data": receipt_dict,
+                "ocr_result": ocr_result,  # 保存OCR結果以便關聯
+                "timestamp": datetime.now().isoformat(),
+                "status": "ai_completed",
+            }
+
+            # 生成暫存檔案名稱
+            cache_filename = f"ai_{filename}_{int(time.time())}.json"
+            cache_path = os.path.join(self.cache_dir, cache_filename)
+
+            # 儲存到JSON檔案
+            with open(cache_path, "w", encoding="utf-8") as f:
+                json.dump(cache_data, f, ensure_ascii=False, indent=2, default=str)
+
+            logger.info(f"AI結果已暫存: {cache_path}")
+            return cache_path
+
+        except Exception as e:
+            logger.error(f"儲存AI結果失敗: {str(e)}")
+            raise
+
+    def load_ai_result(self, filename: str) -> Optional[Dict[str, Any]]:
+        """
+        從暫存檔案載入AI處理結果
+
+        Args:
+            filename: 原始檔案名稱
+
+        Returns:
+            AI結果資料（包含receipt_data和ocr_result），可以直接用ReceiptData.parse_obj()轉換
+        """
+        try:
+            # 查找對應的暫存檔案
+            cache_path = self._find_cache_file(filename, "ai")
+            if not cache_path:
+                logger.debug(f"找不到對應的AI暫存檔案: {filename}")
+                return None
+
+            if not os.path.exists(cache_path):
+                logger.warning(f"AI暫存檔案不存在: {cache_path}")
+                return None
+
+            with open(cache_path, "r", encoding="utf-8") as f:
+                cache_data = json.load(f)
+
+            logger.info(f"載入AI結果: {cache_path}")
+            return cache_data
+
+        except Exception as e:
+            logger.error(f"載入AI結果失敗: {str(e)}")
             return None
 
     def save_processing_status(self, batch_id: str, status: Dict[str, Any]) -> str:
@@ -192,6 +273,14 @@ class CacheService:
                     file_path = os.path.join(self.cache_dir, filename)
                     file_stat = os.stat(file_path)
 
+                    # 判斷暫存類型
+                    if filename.startswith("ocr_"):
+                        cache_type = "ocr"
+                    elif filename.startswith("ai_"):
+                        cache_type = "ai"
+                    else:
+                        cache_type = "status"
+                    
                     cache_files.append(
                         {
                             "filename": filename,
@@ -200,7 +289,7 @@ class CacheService:
                             "modified": datetime.fromtimestamp(
                                 file_stat.st_mtime
                             ).isoformat(),
-                            "type": "ocr" if filename.startswith("ocr_") else "status",
+                            "type": cache_type,
                         }
                     )
 
@@ -245,6 +334,48 @@ class CacheService:
             logger.error(f"清理暫存檔案失敗: {str(e)}")
             return 0
 
+    def delete_ocr_cache(self, filename: str) -> bool:
+        """
+        刪除指定檔案的OCR暫存
+
+        Args:
+            filename: 原始檔案名稱
+
+        Returns:
+            是否成功刪除
+        """
+        try:
+            cache_path = self._find_cache_file(filename, "ocr")
+            if cache_path and os.path.exists(cache_path):
+                os.remove(cache_path)
+                logger.info(f"已刪除OCR暫存: {cache_path}")
+                return True
+            return False
+        except Exception as e:
+            logger.error(f"刪除OCR暫存失敗: {str(e)}")
+            return False
+
+    def delete_ai_cache(self, filename: str) -> bool:
+        """
+        刪除指定檔案的AI暫存
+
+        Args:
+            filename: 原始檔案名稱
+
+        Returns:
+            是否成功刪除
+        """
+        try:
+            cache_path = self._find_cache_file(filename, "ai")
+            if cache_path and os.path.exists(cache_path):
+                os.remove(cache_path)
+                logger.info(f"已刪除AI暫存: {cache_path}")
+                return True
+            return False
+        except Exception as e:
+            logger.error(f"刪除AI暫存失敗: {str(e)}")
+            return False
+
     def get_cache_summary(self) -> Dict[str, Any]:
         """
         獲取暫存摘要資訊
@@ -256,6 +387,7 @@ class CacheService:
             cache_files = self.list_cache_files()
 
             ocr_files = [f for f in cache_files if f["type"] == "ocr"]
+            ai_files = [f for f in cache_files if f["type"] == "ai"]
             status_files = [f for f in cache_files if f["type"] == "status"]
 
             total_size = sum(f["size"] for f in cache_files)
@@ -263,6 +395,7 @@ class CacheService:
             return {
                 "total_files": len(cache_files),
                 "ocr_files": len(ocr_files),
+                "ai_files": len(ai_files),
                 "status_files": len(status_files),
                 "total_size_bytes": total_size,
                 "total_size_mb": round(total_size / (1024 * 1024), 2),

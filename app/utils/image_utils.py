@@ -41,9 +41,16 @@ class ImageUtils:
                 logger.error(f"不支援的檔案格式: {file_ext}")
                 return False
 
-            # 嘗試開啟圖片
-            with Image.open(file_path) as img:
-                img.verify()
+            # 嘗試開啟圖片（verify 會關閉檔案，所以需要重新開啟）
+            try:
+                with Image.open(file_path) as img:
+                    img.verify()
+                # verify 後需要重新開啟才能使用
+                with Image.open(file_path) as img:
+                    img.load()  # 載入圖片以確保可以讀取
+            except Exception as verify_error:
+                logger.error(f"圖片驗證失敗（無法開啟）: {verify_error}")
+                return False
 
             logger.info(f"圖片驗證成功: {file_path}")
             return True

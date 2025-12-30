@@ -39,17 +39,35 @@ CLAUDE_API_KEY=your_claude_api_key_here
 
 ### 3. 啟動系統
 
-#### 方法一：使用啟動腳本（推薦）
+#### 方法一：使用快速啟動腳本（推薦）
+```bash
+./start.sh
+```
+
+**啟動選項**:
+```bash
+# 使用預設設定（開發模式，自動重載）
+./start.sh
+
+# 指定端口
+./start.sh -p 8080
+
+# 指定主機地址
+./start.sh -H 127.0.0.1
+
+# 生產模式（禁用自動重載）
+./start.sh --prod
+
+# 查看所有選項
+./start.sh --help
+```
+
+#### 方法二：使用 Python 啟動腳本
 ```bash
 python start.py
 ```
 
-#### 方法二：直接啟動
-```bash
-python app/main.py
-```
-
-#### 方法三：使用uvicorn
+#### 方法三：直接使用 uvicorn
 ```bash
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
@@ -95,7 +113,10 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 ### 系統管理
 - `GET /summary` - 獲取系統摘要
-- `DELETE /receipts/{filename}` - 刪除收據檔案
+- `GET /uploaded-files` - 獲取已上傳的檔案列表
+- `GET /receipt-image/{filename}` - 獲取收據圖片
+- `DELETE /uploaded-image/{filename}` - 刪除已上傳的圖片（手動刪除）
+- `DELETE /receipts/{filename}` - 刪除收據檔案（包含CSV）
 
 ## 🧪 測試系統
 

@@ -80,6 +80,48 @@ async def health_check():
     }
 
 
+@app.get("/api-status")
+async def check_api_status():
+    """
+    檢查 API 配置狀態
+
+    Returns:
+        API 配置狀態和診斷資訊
+    """
+    status = {
+        "azure_vision": {
+            "configured": bool(settings.azure_vision_endpoint and settings.azure_vision_key),
+            "endpoint": settings.azure_vision_endpoint[:50] + "..." if settings.azure_vision_endpoint and len(settings.azure_vision_endpoint) > 50 else settings.azure_vision_endpoint,
+            "endpoint_full": settings.azure_vision_endpoint if settings.azure_vision_endpoint else None,
+            "key_set": bool(settings.azure_vision_key),
+            "key_preview": settings.azure_vision_key[:10] + "..." if settings.azure_vision_key and len(settings.azure_vision_key) > 10 else None,
+            "test_mode": ocr_service.test_mode,
+        },
+        "claude_api": {
+            "configured": bool(settings.claude_api_key),
+            "key_set": bool(settings.claude_api_key),
+            "key_preview": settings.claude_api_key[:10] + "..." if settings.claude_api_key and len(settings.claude_api_key) > 10 else None,
+            "test_mode": ai_service.test_mode,
+        },
+        "diagnostics": {
+            "upload_dir_exists": os.path.exists(settings.upload_dir),
+            "output_dir_exists": os.path.exists(settings.output_dir),
+        }
+    }
+    
+    # 嘗試解析 Azure 端點（不實際連接，只檢查格式）
+    if settings.azure_vision_endpoint:
+        endpoint = settings.azure_vision_endpoint.strip().rstrip("/")
+        if not endpoint.startswith("https://"):
+            status["azure_vision"]["warning"] = "端點 URL 應該以 https:// 開頭"
+        elif not endpoint.endswith(".cognitiveservices.azure.com"):
+            status["azure_vision"]["warning"] = "端點 URL 格式可能不正確（應包含 .cognitiveservices.azure.com）"
+        else:
+            status["azure_vision"]["endpoint_valid"] = True
+    
+    return status
+
+
 @app.post("/upload", response_model=dict)
 async def upload_receipt(file: UploadFile = File(...)):
     """
@@ -171,14 +213,33 @@ async def upload_batch_receipts(files: List[UploadFile] = File(...)):
                 # 儲存檔案
                 with open(file_path, "wb") as buffer:
                     shutil.copyfileobj(file.file, buffer)
+                    buffer.flush()
+                    if hasattr(buffer, 'fileno'):
+                        try:
+                            os.fsync(buffer.fileno())
+                        except:
+                            pass  # 某些系統可能不支援 fsync
 
-                # 驗證圖片
-                if not image_utils.validate_image(file_path, settings.max_file_size):
-                    os.remove(file_path)  # 刪除無效檔案
+                # 驗證檔案是否存在（等待一小段時間確保檔案已寫入）
+                import time
+                time.sleep(0.01)  # 短暫延遲確保檔案系統同步
+                
+                if not os.path.exists(file_path):
                     failed_files.append(
-                        {"filename": file.filename, "error": "無效的圖片檔案"}
+                        {"filename": file.filename, "error": "檔案儲存失敗"}
                     )
+                    logger.error(f"檔案不存在: {file_path}")
                     continue
+
+                # 驗證圖片（PDF 檔案跳過圖片驗證）
+                if file_ext.lower() != "pdf":
+                    if not image_utils.validate_image(file_path, settings.max_file_size):
+                        if os.path.exists(file_path):
+                            os.remove(file_path)  # 刪除無效檔案
+                        failed_files.append(
+                            {"filename": file.filename, "error": "無效的圖片檔案"}
+                        )
+                        continue
 
                 uploaded_files.append(filename)
                 logger.info(f"批量上傳成功: {filename}")
@@ -234,18 +295,48 @@ async def process_receipt(
         if enhance_image:
             processed_image_path = image_utils.enhance_image_quality(file_path)
 
-        # OCR文字識別
+        # OCR文字識別（檢查是否有暫存）
         logger.info(f"開始OCR處理: {filename}")
-        ocr_result = await ocr_service.extract_text(processed_image_path)
+        
+        # 檢查是否有OCR暫存
+        cache_data = cache_service.load_ocr_result(filename)
+        if cache_data and cache_data.get("ocr_data"):
+            logger.info(f"使用OCR暫存資料: {filename}")
+            ocr_result = cache_data["ocr_data"]
+        else:
+            # 執行OCR
+            ocr_result = await ocr_service.extract_text(processed_image_path)
+            # 保存到暫存
+            cache_service.save_ocr_result(filename, ocr_result)
 
         # 提取結構化資料
         structured_data = ocr_service.extract_structured_data(ocr_result)
 
-        # AI整理和結構化
+        # AI整理和結構化（檢查是否有暫存）
         logger.info(f"開始AI處理: {filename}")
-        receipt_data = await ai_service.process_receipt_text(
-            ocr_result, structured_data
-        )
+        
+        # 檢查是否有AI暫存
+        ai_cache_data = cache_service.load_ai_result(filename)
+        if ai_cache_data and ai_cache_data.get("receipt_data"):
+            logger.info(f"使用AI暫存資料: {filename}")
+            # 從暫存資料恢復ReceiptData對象
+            from app.models.receipt import ReceiptData
+            receipt_dict = ai_cache_data["receipt_data"]
+            # 處理日期字串
+            if isinstance(receipt_dict.get("date"), str):
+                from datetime import datetime
+                try:
+                    receipt_dict["date"] = datetime.fromisoformat(receipt_dict["date"])
+                except:
+                    pass
+            receipt_data = ReceiptData(**receipt_dict)
+        else:
+            # 執行AI處理
+            receipt_data = await ai_service.process_receipt_text(
+                ocr_result, structured_data
+            )
+            # 保存到暫存
+            cache_service.save_ai_result(filename, receipt_data, ocr_result)
 
         # 設定來源圖片
         receipt_data.source_image = filename
@@ -267,6 +358,14 @@ async def process_receipt(
         # 清理臨時檔案
         if enhance_image and processed_image_path != file_path:
             background_tasks.add_task(os.remove, processed_image_path)
+
+        # 處理成功後刪除原始圖片（與批量處理保持一致）
+        try:
+            if os.path.exists(file_path):
+                os.remove(file_path)
+                logger.info(f"🗑️ 已刪除處理成功的圖片: {filename}")
+        except Exception as e:
+            logger.warning(f"刪除圖片失敗: {str(e)}")
 
         logger.info(f"收據處理完成: {filename}, 耗時: {total_time:.2f}秒")
 
@@ -678,6 +777,166 @@ async def download_file(filename: str):
         raise HTTPException(status_code=500, detail=f"下載檔案失敗: {str(e)}")
 
 
+@app.get("/uploaded-files")
+async def get_uploaded_files():
+    """
+    獲取所有已上傳的圖片檔案列表（包含處理狀態）
+
+    Returns:
+        已上傳的檔案列表（包含檔名、大小、上傳時間、圖片URL、處理狀態）
+    """
+    try:
+        files = []
+        allowed_extensions = (".jpg", ".jpeg", ".png", ".pdf")
+        
+        if os.path.exists(settings.upload_dir):
+            for filename in os.listdir(settings.upload_dir):
+                # 只顯示圖片檔案，排除處理過的檔案（如 _resized, _enhanced 等）
+                if any(filename.lower().endswith(ext) for ext in allowed_extensions):
+                    file_path = os.path.join(settings.upload_dir, filename)
+                    
+                    # 跳過處理過的檔案（包含 _resized, _enhanced 等後綴）
+                    if any(suffix in filename for suffix in ["_resized", "_enhanced"]):
+                        continue
+                    
+                    try:
+                        file_stat = os.stat(file_path)
+                        
+                        # 檢查處理狀態
+                        processing_status = "not_processed"  # 未處理
+                        has_ocr_cache = False
+                        
+                        # 檢查是否有OCR暫存
+                        cache_data = cache_service.load_ocr_result(filename)
+                        if cache_data:
+                            has_ocr_cache = True
+                            processing_status = "ocr_completed"  # OCR已完成
+                        
+                        # 檢查是否已有CSV輸出（表示已完成處理）
+                        csv_files = []
+                        if os.path.exists(settings.output_dir):
+                            csv_files = [f for f in os.listdir(settings.output_dir) 
+                                       if f.endswith(".csv") and not f.startswith("detailed_")]
+                        
+                        # 簡單檢查：如果CSV檔案較新於上傳時間，可能已處理（這只是粗略判斷）
+                        # 更準確的方法需要檢查CSV內容，但這裡先簡單判斷
+                        
+                        files.append({
+                            "filename": filename,
+                            "size": file_stat.st_size,
+                            "size_mb": round(file_stat.st_size / (1024 * 1024), 2),
+                            "upload_time": datetime.fromtimestamp(file_stat.st_mtime).isoformat(),
+                            "modified_time": datetime.fromtimestamp(file_stat.st_mtime).strftime("%Y-%m-%d %H:%M:%S"),
+                            "image_url": f"/receipt-image/{filename}",
+                            "processing_status": processing_status,
+                            "has_ocr_cache": has_ocr_cache,
+                        })
+                    except Exception as e:
+                        logger.warning(f"讀取檔案資訊失敗: {filename}, 錯誤: {str(e)}")
+                        continue
+        
+        # 按修改時間排序（最新的在前）
+        files.sort(key=lambda x: x["upload_time"], reverse=True)
+        
+        return {
+            "success": True,
+            "files": files,
+            "total_count": len(files),
+        }
+    
+    except Exception as e:
+        logger.error(f"獲取上傳檔案列表失敗: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"獲取檔案列表失敗: {str(e)}")
+
+
+@app.get("/file-status/{filename}")
+async def get_file_status(filename: str):
+    """
+    檢查檔案的處理狀態
+
+    Args:
+        filename: 檔案名稱
+
+    Returns:
+        檔案的處理狀態（是否已上傳、是否有OCR暫存、是否可以處理）
+    """
+    try:
+        # 安全檢查：防止路徑遍歷攻擊
+        if ".." in filename or "/" in filename:
+            raise HTTPException(status_code=400, detail="無效的檔案名稱")
+        
+        file_path = os.path.join(settings.upload_dir, filename)
+        
+        result = {
+            "filename": filename,
+            "exists": os.path.exists(file_path),
+            "has_ocr_cache": False,
+            "processing_status": "not_processed",
+            "can_process": False,
+        }
+        
+        if not result["exists"]:
+            return result
+        
+        # 檢查OCR暫存
+        cache_data = cache_service.load_ocr_result(filename)
+        if cache_data:
+            result["has_ocr_cache"] = True
+            result["processing_status"] = "ocr_completed"
+            result["can_process"] = True  # 有OCR暫存，可以直接處理
+        
+        # 如果檔案存在，也可以處理（即使沒有暫存）
+        if not result["can_process"]:
+            result["can_process"] = True
+            result["processing_status"] = "not_processed"
+        
+        return result
+    
+    except Exception as e:
+        logger.error(f"檢查檔案狀態失敗: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"檢查檔案狀態失敗: {str(e)}")
+
+
+@app.get("/receipt-image/{filename}")
+async def get_receipt_image(filename: str):
+    """
+    獲取上傳的收據圖片
+
+    Args:
+        filename: 圖片檔案名稱
+
+    Returns:
+        圖片檔案
+    """
+    try:
+        # 安全檢查：防止路徑遍歷攻擊
+        if ".." in filename or "/" in filename:
+            raise HTTPException(status_code=400, detail="無效的檔案名稱")
+        
+        file_path = os.path.join(settings.upload_dir, filename)
+        
+        if not os.path.exists(file_path):
+            raise HTTPException(status_code=404, detail="圖片不存在")
+        
+        # 根據檔案擴展名決定 MIME 類型
+        ext = filename.split(".")[-1].lower()
+        media_types = {
+            "jpg": "image/jpeg",
+            "jpeg": "image/jpeg",
+            "png": "image/png",
+            "pdf": "application/pdf",
+        }
+        media_type = media_types.get(ext, "application/octet-stream")
+        
+        return FileResponse(file_path, media_type=media_type, filename=filename)
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"獲取圖片失敗: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"獲取圖片失敗: {str(e)}")
+
+
 @app.get("/receipts", response_model=ReceiptListResponse)
 async def get_receipts(limit: int = 10, offset: int = 0):
     """
@@ -747,6 +1006,255 @@ async def download_csv(filename: str):
         raise HTTPException(status_code=500, detail=f"下載失敗: {str(e)}")
 
 
+@app.get("/csv-files-list")
+async def get_csv_files_list():
+    """
+    獲取所有可用的CSV檔案列表
+
+    Returns:
+        CSV檔案列表
+    """
+    try:
+        if not os.path.exists(settings.output_dir):
+            return {
+                "success": False,
+                "message": "輸出目錄不存在",
+                "csv_files": []
+            }
+
+        # 查找所有summary CSV檔案
+        csv_files_list = [
+            f
+            for f in os.listdir(settings.output_dir)
+            if f.startswith("receipts_summary_") and f.endswith(".csv")
+        ]
+
+        csv_files_list.sort(reverse=True)  # 最新的在前
+
+        # 格式化檔案名稱為顯示名稱（提取時間戳）
+        csv_files_with_info = []
+        for csv_file in csv_files_list:
+            # receipts_summary_20251230_164641.csv -> 2025-12-30 16:46:41
+            try:
+                timestamp_str = csv_file.replace("receipts_summary_", "").replace(".csv", "")
+                date_str = timestamp_str[:8]  # 20251230
+                time_str = timestamp_str[9:]  # 164641
+                formatted_date = f"{date_str[:4]}-{date_str[4:6]}-{date_str[6:8]} {time_str[:2]}:{time_str[2:4]}:{time_str[4:6]}"
+                csv_files_with_info.append({
+                    "filename": csv_file,
+                    "display_name": formatted_date
+                })
+            except:
+                csv_files_with_info.append({
+                    "filename": csv_file,
+                    "display_name": csv_file
+                })
+
+        return {
+            "success": True,
+            "csv_files": csv_files_with_info
+        }
+
+    except Exception as e:
+        logger.error(f"獲取CSV檔案列表失敗: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"獲取CSV檔案列表失敗: {str(e)}")
+
+
+@app.get("/csv-data/{filename}")
+async def get_csv_data(filename: str):
+    """
+    獲取指定CSV檔案的完整資料（包含摘要和明細）
+    並自動刪除已處理的圖片（僅限最新檔案）
+
+    Args:
+        filename: CSV檔案名稱（receipts_summary_*.csv）
+
+    Returns:
+        CSV資料（摘要和明細）
+    """
+    try:
+        import csv
+        
+        if not os.path.exists(settings.output_dir):
+            return {
+                "success": False,
+                "message": "輸出目錄不存在",
+                "summary_data": [],
+                "details_data": []
+            }
+
+        # 驗證檔案名稱
+        if not filename.startswith("receipts_summary_") or not filename.endswith(".csv"):
+            raise HTTPException(status_code=400, detail="無效的CSV檔案名稱")
+
+        summary_path = os.path.join(settings.output_dir, filename)
+        if not os.path.exists(summary_path):
+            raise HTTPException(status_code=404, detail="CSV檔案不存在")
+        
+        # 推斷對應的details CSV檔案名稱
+        timestamp = filename.replace("receipts_summary_", "").replace(".csv", "")
+        details_filename = f"receipts_details_{timestamp}.csv"
+        details_path = os.path.join(settings.output_dir, details_filename)
+        
+        # 讀取summary CSV
+        summary_data = []
+        processed_images = set()  # 收集所有已處理的圖片檔名
+        if os.path.exists(summary_path):
+            with open(summary_path, "r", encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+                summary_data = list(reader)
+                # 從summary CSV中提取已處理的圖片檔名
+                for row in summary_data:
+                    source_image = row.get("來源圖片", "").strip()
+                    if source_image:
+                        processed_images.add(source_image)
+        
+        # 讀取details CSV
+        details_data = []
+        if os.path.exists(details_path):
+            with open(details_path, "r", encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+                details_data = list(reader)
+        
+        # 只有在請求最新檔案時才刪除已處理的圖片
+        deleted_count = 0
+        csv_files_list = [
+            f
+            for f in os.listdir(settings.output_dir)
+            if f.startswith("receipts_summary_") and f.endswith(".csv")
+        ]
+        if csv_files_list:
+            csv_files_list.sort(reverse=True)
+            is_latest = csv_files_list[0] == filename
+            
+            if is_latest and processed_images and os.path.exists(settings.upload_dir):
+                for image_filename in processed_images:
+                    image_path = os.path.join(settings.upload_dir, image_filename)
+                    if os.path.exists(image_path):
+                        try:
+                            os.remove(image_path)
+                            logger.info(f"🗑️ 已刪除CSV中已記錄的圖片: {image_filename}")
+                            deleted_count += 1
+                        except Exception as e:
+                            logger.warning(f"刪除圖片失敗 {image_filename}: {str(e)}")
+                
+                if deleted_count > 0:
+                    logger.info(f"✅ 已清理 {deleted_count} 個已處理的圖片檔案")
+        
+        return {
+            "success": True,
+            "summary_filename": filename,
+            "details_filename": details_filename,
+            "summary_data": summary_data,
+            "details_data": details_data,
+            "deleted_images_count": deleted_count,
+            "is_latest": csv_files_list and csv_files_list[0] == filename if csv_files_list else False
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"讀取CSV資料失敗: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"讀取CSV資料失敗: {str(e)}")
+
+
+@app.get("/latest-csv-data")
+async def get_latest_csv_data():
+    """
+    獲取最新CSV檔案的完整資料（包含摘要和明細）
+    並自動刪除已處理的圖片
+
+    Returns:
+        CSV資料（摘要和明細）
+    """
+    try:
+        if not os.path.exists(settings.output_dir):
+            return {
+                "success": False,
+                "message": "輸出目錄不存在",
+                "summary_data": [],
+                "details_data": []
+            }
+
+        # 查找最新的summary CSV檔案
+        csv_files_list = [
+            f
+            for f in os.listdir(settings.output_dir)
+            if f.startswith("receipts_summary_") and f.endswith(".csv")
+        ]
+
+        if not csv_files_list:
+            return {
+                "success": False,
+                "message": "沒有找到CSV檔案",
+                "summary_data": [],
+                "details_data": []
+            }
+
+        csv_files_list.sort(reverse=True)
+        latest_summary_csv = csv_files_list[0]
+        
+        # 使用新的端點來獲取資料（通過內部調用）
+        # 這裡需要重新實現邏輯，因為不能直接調用另一個路由處理函數
+        import csv
+        
+        summary_path = os.path.join(settings.output_dir, latest_summary_csv)
+        
+        # 推斷對應的details CSV檔案名稱
+        timestamp = latest_summary_csv.replace("receipts_summary_", "").replace(".csv", "")
+        details_filename = f"receipts_details_{timestamp}.csv"
+        details_path = os.path.join(settings.output_dir, details_filename)
+        
+        # 讀取summary CSV
+        summary_data = []
+        processed_images = set()
+        if os.path.exists(summary_path):
+            with open(summary_path, "r", encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+                summary_data = list(reader)
+                for row in summary_data:
+                    source_image = row.get("來源圖片", "").strip()
+                    if source_image:
+                        processed_images.add(source_image)
+        
+        # 讀取details CSV
+        details_data = []
+        if os.path.exists(details_path):
+            with open(details_path, "r", encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+                details_data = list(reader)
+        
+        # 刪除已處理的圖片（僅限最新檔案）
+        deleted_count = 0
+        if processed_images and os.path.exists(settings.upload_dir):
+            for image_filename in processed_images:
+                image_path = os.path.join(settings.upload_dir, image_filename)
+                if os.path.exists(image_path):
+                    try:
+                        os.remove(image_path)
+                        logger.info(f"🗑️ 已刪除CSV中已記錄的圖片: {image_filename}")
+                        deleted_count += 1
+                    except Exception as e:
+                        logger.warning(f"刪除圖片失敗 {image_filename}: {str(e)}")
+        
+        if deleted_count > 0:
+            logger.info(f"✅ 已清理 {deleted_count} 個已處理的圖片檔案")
+        
+        return {
+            "success": True,
+            "summary_filename": latest_summary_csv,
+            "details_filename": details_filename,
+            "summary_data": summary_data,
+            "details_data": details_data,
+            "deleted_images_count": deleted_count,
+            "is_latest": True
+        }
+
+    except Exception as e:
+        logger.error(f"讀取CSV資料失敗: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"讀取CSV資料失敗: {str(e)}")
+
+
 @app.get("/summary")
 async def get_summary():
     """
@@ -756,27 +1264,34 @@ async def get_summary():
         摘要資訊
     """
     try:
-        # 統計檔案數量
-        receipt_files = len(
-            [
-                f
-                for f in os.listdir(settings.upload_dir)
-                if f.lower().endswith((".jpg", ".jpeg", ".png"))
-            ]
-        )
-        csv_files = len(
-            [f for f in os.listdir(settings.output_dir) if f.endswith(".csv")]
-        )
+        # 統計檔案數量（確保目錄存在）
+        receipt_files = 0
+        if os.path.exists(settings.upload_dir):
+            receipt_files = len(
+                [
+                    f
+                    for f in os.listdir(settings.upload_dir)
+                    if f.lower().endswith((".jpg", ".jpeg", ".png"))
+                ]
+            )
+        
+        csv_files = 0
+        if os.path.exists(settings.output_dir):
+            csv_files = len(
+                [f for f in os.listdir(settings.output_dir) if f.endswith(".csv")]
+            )
 
         # 獲取最新的CSV摘要
         latest_csv = None
         csv_summary = None
 
-        csv_files_list = [
-            f
-            for f in os.listdir(settings.output_dir)
-            if f.endswith(".csv") and not f.startswith("detailed_")
-        ]
+        csv_files_list = []
+        if os.path.exists(settings.output_dir):
+            csv_files_list = [
+                f
+                for f in os.listdir(settings.output_dir)
+                if f.endswith(".csv") and not f.startswith("detailed_")
+            ]
 
         if csv_files_list:
             csv_files_list.sort(reverse=True)
@@ -798,10 +1313,52 @@ async def get_summary():
         raise HTTPException(status_code=500, detail=f"獲取摘要失敗: {str(e)}")
 
 
+@app.delete("/uploaded-image/{filename}")
+async def delete_uploaded_image(filename: str):
+    """
+    刪除已上傳的圖片檔案（僅刪除圖片，不刪除CSV）
+
+    Args:
+        filename: 圖片檔案名稱
+
+    Returns:
+        刪除結果
+    """
+    try:
+        # 刪除上傳的圖片
+        image_path = os.path.join(settings.upload_dir, filename)
+        
+        if not os.path.exists(image_path):
+            raise HTTPException(status_code=404, detail="圖片檔案不存在")
+
+        os.remove(image_path)
+        logger.info(f"🗑️ 已刪除圖片: {filename}")
+
+        # 同時刪除相關的暫存檔案（OCR和AI暫存）
+        try:
+            from app.services.cache_service import cache_service
+            cache_service.delete_ocr_cache(filename)
+            cache_service.delete_ai_cache(filename)
+        except Exception as e:
+            logger.warning(f"刪除暫存檔案失敗: {str(e)}")
+
+        return {
+            "success": True,
+            "deleted_image": filename,
+            "message": f"已刪除圖片: {filename}"
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"刪除圖片失敗: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"刪除失敗: {str(e)}")
+
+
 @app.delete("/receipts/{filename}")
 async def delete_receipt(filename: str):
     """
-    刪除收據檔案
+    刪除收據檔案（包含圖片和CSV）
 
     Args:
         filename: 檔案名稱

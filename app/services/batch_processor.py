@@ -128,11 +128,31 @@ class BatchProcessor:
             # 提取結構化資料
             structured_data = ocr_service.extract_structured_data(ocr_result)
 
-            # AI整理和結構化
+            # AI整理和結構化（檢查是否有暫存）
             logger.info(f"批次處理 - AI: {filename}")
-            receipt_data = await ai_service.process_receipt_text(
-                ocr_result, structured_data
-            )
+            
+            # 檢查是否有AI暫存
+            ai_cache_data = cache_service.load_ai_result(filename)
+            if ai_cache_data and ai_cache_data.get("receipt_data"):
+                logger.info(f"使用AI暫存資料: {filename}")
+                # 從暫存資料恢復ReceiptData對象
+                from app.models.receipt import ReceiptData
+                receipt_dict = ai_cache_data["receipt_data"]
+                # 處理日期字串
+                if isinstance(receipt_dict.get("date"), str):
+                    from datetime import datetime
+                    try:
+                        receipt_dict["date"] = datetime.fromisoformat(receipt_dict["date"])
+                    except:
+                        pass
+                receipt_data = ReceiptData(**receipt_dict)
+            else:
+                # 執行AI處理
+                receipt_data = await ai_service.process_receipt_text(
+                    ocr_result, structured_data
+                )
+                # 保存到暫存
+                cache_service.save_ai_result(filename, receipt_data, ocr_result)
 
             # 設定來源圖片
             receipt_data.source_image = filename

@@ -7,6 +7,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -374,6 +375,254 @@
         .stat-label {
             opacity: 0.9;
         }
+
+        .uploaded-files-section {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .uploaded-files-section h2 {
+            color: #495057;
+            margin-bottom: 20px;
+        }
+
+        .uploaded-files-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .uploaded-file-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            border: 2px solid #e9ecef;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .uploaded-file-card:hover {
+            border-color: #4facfe;
+            box-shadow: 0 5px 15px rgba(79, 172, 254, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .uploaded-file-delete-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(220, 53, 69, 0.9);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .uploaded-file-delete-btn:hover {
+            background: rgba(220, 53, 69, 1);
+            transform: scale(1.1);
+            box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+        }
+
+        .uploaded-file-thumbnail {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            background: #e9ecef;
+        }
+
+        .uploaded-file-info {
+            font-size: 0.9em;
+            color: #495057;
+        }
+
+        .uploaded-file-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+            word-break: break-word;
+            color: #212529;
+        }
+
+        .uploaded-file-meta {
+            color: #6c757d;
+            font-size: 0.85em;
+            margin-top: 5px;
+        }
+
+        .uploaded-file-meta span {
+            display: block;
+            margin: 2px 0;
+        }
+
+        .image-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.9);
+            cursor: pointer;
+        }
+
+        .image-modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            max-width: 90%;
+            max-height: 90%;
+        }
+
+        .image-modal img {
+            max-width: 100%;
+            max-height: 90vh;
+            border-radius: 10px;
+        }
+
+        .image-modal-close {
+            position: absolute;
+            top: 20px;
+            right: 35px;
+            color: #f1f1f1;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .image-modal-close:hover {
+            color: #fff;
+        }
+
+        .result-section h2 {
+            margin-bottom: 20px;
+            color: #667eea;
+        }
+
+        .result-section h3 {
+            margin-bottom: 15px;
+            color: #764ba2;
+            font-size: 1.3em;
+        }
+
+        #chartContainer {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            position: relative;
+            min-height: 400px;
+            overflow: hidden;
+        }
+
+        #chartContainer canvas {
+            display: block;
+            max-height: 400px;
+            width: 100% !important;
+            height: auto !important;
+        }
+
+        .csv-tables-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 30px;
+            margin-top: 20px;
+        }
+
+        .csv-table-section {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .csv-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 0.9em;
+            border: 1px solid #dee2e6;
+            background: white;
+        }
+
+        .csv-table th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 8px;
+            text-align: left;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-bottom: 2px solid rgba(255, 255, 255, 0.5);
+        }
+
+        .csv-table th:first-child {
+            border-left: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .csv-table th:last-child {
+            border-right: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .csv-table td {
+            padding: 10px 8px;
+            border: 1px solid #dee2e6;
+            border-top: none;
+        }
+
+        .csv-table td:first-child {
+            border-left: 1px solid #dee2e6;
+        }
+
+        .csv-table td:last-child {
+            border-right: 1px solid #dee2e6;
+        }
+
+        .csv-table tbody tr:last-child td {
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .csv-table tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        .csv-table .amount {
+            text-align: right;
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .csv-table .number {
+            text-align: right;
+        }
+
+        /* 商品明細表格樣式 */
+        #detailsTable .csv-table {
+            font-size: 0.85em;
+        }
+
+        #detailsTable .csv-table th,
+        #detailsTable .csv-table td {
+            padding: 8px 6px;
+        }
     </style>
 </head>
 <body>
@@ -384,6 +633,13 @@
         </div>
 
         <div class="main-content">
+            <!-- 已上傳圖片列表 -->
+            <div class="uploaded-files-section" id="uploadedFilesSection" style="display: none;">
+                <h2>📁 已上傳的圖片</h2>
+                <div class="uploaded-files-grid" id="uploadedFilesGrid"></div>
+                <button class="btn btn-outline" id="refreshFilesBtn" style="margin-top: 15px;">🔄 重新整理</button>
+            </div>
+
             <div class="upload-section">
                 <h2>📸 上傳收據圖片</h2>
                 <p>支援 JPG、PNG、PDF 格式，最大 10MB（可多選或資料夾上傳）</p>
@@ -425,8 +681,31 @@
             </div>
 
             <div class="result-section" id="resultSection" style="display: none;">
-                <h2>📊 識別結果</h2>
-                <div class="result-grid" id="resultGrid"></div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+                    <h2 style="margin: 0;">📊 識別結果</h2>
+                    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                        <label for="csvFileSelect" style="font-weight: 600; color: #495057;">選擇CSV檔案：</label>
+                        <select id="csvFileSelect" style="padding: 8px 12px; border: 2px solid #667eea; border-radius: 8px; font-size: 14px; background: white; cursor: pointer; min-width: 200px;">
+                            <option value="">載入中...</option>
+                        </select>
+                        <button id="downloadCSVBtn" class="btn" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); border: none; padding: 8px 20px; border-radius: 8px; color: white; font-weight: 600; cursor: pointer; font-size: 14px;">
+                            💾 下載CSV
+                        </button>
+                    </div>
+                </div>
+                <div id="chartContainer" style="margin-bottom: 30px;">
+                    <canvas id="amountChart"></canvas>
+                </div>
+                <div class="csv-tables-container">
+                    <div class="csv-table-section">
+                        <h3>📋 收據摘要</h3>
+                        <div id="summaryTable"></div>
+                    </div>
+                    <div class="csv-table-section">
+                        <h3>🛒 商品明細</h3>
+                        <div id="detailsTable"></div>
+                    </div>
+                </div>
             </div>
 
             <div class="stats" id="statsSection" style="display: none;">
@@ -443,6 +722,14 @@
                     <div class="stat-label">平均信心度</div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- 圖片查看模態框 -->
+    <div class="image-modal" id="imageModal">
+        <span class="image-modal-close" id="imageModalClose">&times;</span>
+        <div class="image-modal-content">
+            <img id="modalImage" src="" alt="收據圖片">
         </div>
     </div>
 
@@ -468,8 +755,13 @@
         const folderFiles = document.getElementById('folderFiles');
         const loading = document.getElementById('loading');
         const resultSection = document.getElementById('resultSection');
-        const resultGrid = document.getElementById('resultGrid');
         const statsSection = document.getElementById('statsSection');
+        const uploadedFilesSection = document.getElementById('uploadedFilesSection');
+        const uploadedFilesGrid = document.getElementById('uploadedFilesGrid');
+        const refreshFilesBtn = document.getElementById('refreshFilesBtn');
+        const imageModal = document.getElementById('imageModal');
+        const modalImage = document.getElementById('modalImage');
+        const imageModalClose = document.getElementById('imageModalClose');
 
         // 拖拽上傳
         uploadArea.addEventListener('dragover', (e) => {
@@ -531,21 +823,39 @@
         function handleFileSelect(files) {
             console.log('選擇檔案:', files.length, '個檔案');
             
-            // 驗證檔案格式
+            // 驗證檔案格式（同時檢查檔案類型和擴展名，更可靠）
             const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
+            const allowedExtensions = ['.jpg', '.jpeg', '.png', '.pdf'];
+            
             const validFiles = files.filter(file => {
-                if (!allowedTypes.includes(file.type)) {
+                // 檢查檔案擴展名
+                const fileName = file.name.toLowerCase();
+                const hasValidExtension = allowedExtensions.some(ext => fileName.endsWith(ext));
+                
+                // 檢查 MIME 類型（如果有的話）
+                const hasValidType = !file.type || allowedTypes.includes(file.type);
+                
+                if (!hasValidExtension && !hasValidType) {
+                    console.warn(`不支援的檔案格式: ${file.name} (type: ${file.type})`);
                     showError(`不支援的檔案格式: ${file.name}`);
                     return false;
                 }
+                
                 if (file.size > 10 * 1024 * 1024) {
-                    showError(`檔案太大: ${file.name}`);
+                    console.warn(`檔案太大: ${file.name} (${(file.size / (1024 * 1024)).toFixed(2)}MB)`);
+                    showError(`檔案太大: ${file.name} (${(file.size / (1024 * 1024)).toFixed(2)}MB)`);
                     return false;
                 }
+                
                 return true;
             });
 
+            console.log('有效檔案數:', validFiles.length, '個');
+
             if (validFiles.length === 0) {
+                // 如果沒有有效檔案，確保按鈕保持禁用狀態
+                uploadBtn.disabled = true;
+                uploadBatchBtn.disabled = true;
                 return;
             }
 
@@ -565,22 +875,31 @@
                 showSuccess(`已選擇 ${validFiles.length} 個檔案`);
             }
             
-            console.log('檔案已設定:', uploadedFile ? '單個檔案' : '多個檔案');
+            console.log('檔案已設定:', uploadedFile ? '單個檔案' : '多個檔案', 
+                       'uploadBtn disabled:', uploadBtn.disabled, 
+                       'uploadBatchBtn disabled:', uploadBatchBtn.disabled);
         }
 
         function handleFolderSelect(files) {
             console.log('選擇資料夾:', files.length, '個檔案');
             
-            // 過濾圖片檔案
-            const imageFiles = files.filter(file => {
+            // 過濾圖片檔案（同時檢查檔案類型和擴展名）
                 const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
-                return allowedTypes.includes(file.type);
+            const allowedExtensions = ['.jpg', '.jpeg', '.png', '.pdf'];
+            
+            const imageFiles = files.filter(file => {
+                const fileName = file.name.toLowerCase();
+                const hasValidExtension = allowedExtensions.some(ext => fileName.endsWith(ext));
+                const hasValidType = !file.type || allowedTypes.includes(file.type);
+                return hasValidExtension || hasValidType;
             });
             
             console.log('資料夾中的圖片檔案:', imageFiles.length, '個');
             
             if (imageFiles.length === 0) {
                 showError('資料夾中沒有找到支援的圖片檔案');
+                uploadBtn.disabled = true;
+                uploadBatchBtn.disabled = true;
                 return;
             }
             
@@ -593,6 +912,7 @@
             uploadBtn.disabled = true;
             uploadBatchBtn.disabled = false;
             
+            console.log('資料夾選擇完成 - uploadBatchBtn disabled:', uploadBatchBtn.disabled);
             showSuccess(`已選擇資料夾，包含 ${imageFiles.length} 個圖片檔案`);
         }
 
@@ -681,15 +1001,28 @@
                     processBtn.disabled = false;
                     showSuccess('圖片上傳成功！');
                     console.log('上傳成功, filename:', uploadedFilename);
+                    
+                    // 清除選擇的檔案，讓用戶可以選擇新檔案
+                    uploadedFile = null;
+                    fileInput.value = ''; // 清除檔案輸入
+                    
+                    // 上傳成功後，禁用上傳按鈕（因為檔案已經上傳，需要重新選擇）
+                    uploadBtn.disabled = true;
+                    
+                    // 刷新已上傳檔案列表
+                    await loadUploadedFiles();
                 } else {
                     showError('上傳失敗: ' + result.detail);
+                    // 上傳失敗，保持按鈕啟用狀態，允許重試
+                    uploadBtn.disabled = false;
                 }
             } catch (error) {
                 console.error('上傳錯誤:', error);
                 showError('上傳失敗: ' + error.message);
+                // 發生錯誤，保持按鈕啟用狀態，允許重試
+                uploadBtn.disabled = false;
             } finally {
                 showLoading(false);
-                uploadBtn.disabled = false;
             }
         });
 
@@ -735,15 +1068,30 @@
                     if (result.failed_files.length > 0) {
                         console.log('失敗的檔案:', result.failed_files);
                     }
+                    
+                    // 清除選擇的檔案，讓用戶可以選擇新檔案
+                    uploadedFiles = [];
+                    folderInput.value = ''; // 清除資料夾輸入
+                    fileInput.value = ''; // 清除檔案輸入
+                    folderPreview.style.display = 'none'; // 隱藏資料夾預覽
+                    
+                    // 上傳成功後，禁用批量上傳按鈕（因為檔案已經上傳，需要重新選擇）
+                    uploadBatchBtn.disabled = true;
+                    
+                    // 刷新已上傳檔案列表
+                    await loadUploadedFiles();
                 } else {
                     showError('批量上傳失敗: ' + (result.error || '未知錯誤'));
+                    // 上傳失敗，保持按鈕啟用狀態，允許重試
+                    uploadBatchBtn.disabled = false;
                 }
             } catch (error) {
                 console.error('批量上傳錯誤:', error);
                 showError('批量上傳失敗: ' + error.message);
+                // 發生錯誤，保持按鈕啟用狀態，允許重試
+                uploadBatchBtn.disabled = false;
             } finally {
                 showLoading(false);
-                uploadBatchBtn.disabled = false;
             }
         });
 
@@ -785,8 +1133,10 @@
                 console.log('process回應結果:', result);
 
                 if (result.success) {
-                    showResult(result.data);
-                    await updateStats();
+                    // 顯示CSV數據而不是單個結果（會自動更新統計）
+                    await showCSVResults();
+                    // 處理完成後刷新已上傳檔案列表（已處理的圖片會被刪除）
+                    await loadUploadedFiles();
                     showSuccess('識別完成！');
                 } else {
                     showError('識別失敗: ' + (result.error || '未知錯誤'));
@@ -863,36 +1213,14 @@
                 console.log('批量處理回應結果:', result);
 
                 if (result.success) {
-                    showResult(result.results[0].data); // 顯示第一個結果
-                    await updateStats();
+                    // 處理完成後刷新已上傳檔案列表（已處理的圖片會被刪除）
+                    await loadUploadedFiles();
                     
-                    // 顯示整合CSV下載連結
-                    let successMessage = `批量識別完成！成功: ${result.processed_count}, 失敗: ${result.failed_count}, 耗時: ${result.total_time}秒`;
+                    // 顯示批量處理統計資訊
+                    showBatchSummary(result);
                     
-                    // 顯示檔案管理資訊
-                    if (result.deleted_successful > 0) {
-                        successMessage += `<br>🗑️ 已自動刪除 ${result.deleted_successful} 個成功處理的圖片`;
-                    }
-                    if (result.deleted_failed > 0) {
-                        successMessage += `<br>🗑️ 已自動刪除 ${result.deleted_failed} 個失敗的圖片`;
-                    }
-                    
-                    if (result.csv_files) {
-                        successMessage += `<br><br>📊 CSV檔案已生成：`;
-                        if (result.csv_files.summary_csv) {
-                            successMessage += `<br>📋 <a href="/download/${result.csv_files.summary_csv.split('/').pop()}" target="_blank">收據摘要</a>`;
-                        }
-                        if (result.csv_files.details_csv) {
-                            successMessage += `<br>🛒 <a href="/download/${result.csv_files.details_csv.split('/').pop()}" target="_blank">商品明細</a>`;
-                        }
-                    }
-                    
-                    showSuccess(successMessage);
-                    
-                    if (result.failed_files.length > 0) {
-                        console.log('失敗的檔案:', result.failed_files);
-                        showError(`有 ${result.failed_files.length} 個檔案處理失敗，請檢查日誌`);
-                    }
+                    // 自動顯示最新的CSV數據（會自動更新統計）
+                    await showCSVResults();
                 } else {
                     showError('批量識別失敗: ' + (result.error || '未知錯誤'));
                 }
@@ -968,37 +1296,16 @@
                 console.log('快速批量處理回應結果:', result);
 
                 if (result.success) {
-                    showResult(result.results[0].data); // 顯示第一個結果
                     await updateStats();
                     
-                    // 顯示整合CSV下載連結
-                    let successMessage = `⚡ 快速批量識別完成！成功: ${result.processed_count}, 失敗: ${result.failed_count}, 耗時: ${result.total_time}秒`;
-                    successMessage += `<br>平均每項處理時間: ${result.avg_time_per_item}秒`;
+                    // 處理完成後刷新已上傳檔案列表（已處理的圖片會被刪除）
+                    await loadUploadedFiles();
                     
-                    // 顯示檔案管理資訊
-                    if (result.deleted_successful > 0) {
-                        successMessage += `<br>🗑️ 已自動刪除 ${result.deleted_successful} 個成功處理的圖片`;
-                    }
-                    if (result.deleted_failed > 0) {
-                        successMessage += `<br>🗑️ 已自動刪除 ${result.deleted_failed} 個失敗的圖片`;
-                    }
+                    // 顯示批量處理統計資訊
+                    showBatchSummary(result, true);
                     
-                    if (result.csv_files) {
-                        successMessage += `<br><br>📊 CSV檔案已生成：`;
-                        if (result.csv_files.summary_csv) {
-                            successMessage += `<br>📋 <a href="/download/${result.csv_files.summary_csv.split('/').pop()}" target="_blank">收據摘要</a>`;
-                        }
-                        if (result.csv_files.details_csv) {
-                            successMessage += `<br>🛒 <a href="/download/${result.csv_files.details_csv.split('/').pop()}" target="_blank">商品明細</a>`;
-                        }
-                    }
-                    
-                    showSuccess(successMessage);
-                    
-                    if (result.failed_files.length > 0) {
-                        console.log('失敗的檔案:', result.failed_files);
-                        showError(`有 ${result.failed_files.length} 個檔案處理失敗，請檢查日誌`);
-                    }
+                    // 自動顯示最新的CSV數據
+                    await showCSVResults();
                 } else {
                     showError('快速批量識別失敗: ' + (result.error || '未知錯誤'));
                 }
@@ -1105,118 +1412,455 @@
             }, 200);
         }
 
-        function showResult(data) {
-            resultSection.style.display = 'block';
-            resultGrid.innerHTML = '';
+        // 顯示批量處理統計資訊
+        function showBatchSummary(result, isOptimized = false) {
+            const prefix = isOptimized ? '⚡ 快速批量' : '批量';
+            
+            let message = `${prefix}識別完成！<br><br>`;
+            message += `✅ 成功處理: ${result.processed_count} 個檔案<br>`;
+            message += `❌ 失敗: ${result.failed_count} 個檔案<br>`;
+            message += `⏱️ 總耗時: ${result.total_time}秒`;
+            
+            if (isOptimized && result.avg_time_per_item) {
+                message += `<br>📊 平均每項: ${result.avg_time_per_item}秒`;
+            }
+            
+            // 顯示檔案管理資訊
+            if (result.deleted_successful > 0) {
+                message += `<br><br>🗑️ 已自動刪除 ${result.deleted_successful} 個成功處理的圖片`;
+            }
+            if (result.deleted_failed > 0) {
+                message += `<br>🗑️ 已自動刪除 ${result.deleted_failed} 個失敗的圖片`;
+            }
+            
+            // 顯示CSV下載連結
+            if (result.csv_files) {
+                message += `<br><br><strong>📊 CSV檔案已生成：</strong>`;
+                if (result.csv_files.summary_csv) {
+                    const csvName = result.csv_files.summary_csv.split('/').pop();
+                    message += `<br>📋 <a href="/download/${csvName}" target="_blank" style="color: #4CAF50; text-decoration: underline;">收據摘要 (${csvName})</a>`;
+                }
+                if (result.csv_files.details_csv) {
+                    const csvName = result.csv_files.details_csv.split('/').pop();
+                    message += `<br>🛒 <a href="/download/${csvName}" target="_blank" style="color: #4CAF50; text-decoration: underline;">商品明細 (${csvName})</a>`;
+                }
+                message += `<br><br><small style="color: #666;">💡 提示：已處理的圖片已自動刪除，詳細資料請下載CSV檔案查看</small>`;
+            }
+            
+            showSuccess(message);
+            
+            if (result.failed_files && result.failed_files.length > 0) {
+                console.log('失敗的檔案:', result.failed_files);
+                const failedList = result.failed_files.map(f => f.filename || f).join(', ');
+                showError(`有 ${result.failed_files.length} 個檔案處理失敗：${failedList}`);
+            }
+        }
 
-            // 格式化日期
-            const formatDate = (dateStr) => {
+        let amountChart = null;
+
+        // 載入CSV檔案列表
+        async function loadCSVFilesList() {
+            try {
+                const csvFileSelect = document.getElementById('csvFileSelect');
+                if (!csvFileSelect) {
+                    console.error('找不到csvFileSelect元素');
+                    return;
+                }
+
+                const response = await fetch('/csv-files-list');
+                const result = await response.json();
+                
+                if (result.success && result.csv_files && result.csv_files.length > 0) {
+                    csvFileSelect.innerHTML = '';
+                    
+                    // 添加選項
+                    result.csv_files.forEach((file, index) => {
+                        const option = document.createElement('option');
+                        option.value = file.filename;
+                        option.textContent = file.display_name;
+                        if (index === 0) {
+                            option.textContent += ' (最新)';
+                        }
+                        csvFileSelect.appendChild(option);
+                    });
+                    
+                    // 預設選擇第一個（最新的）並自動載入數據
+                    if (result.csv_files.length > 0) {
+                        csvFileSelect.value = result.csv_files[0].filename;
+                        // 自動載入最新CSV數據
+                        await loadCSVData(result.csv_files[0].filename);
+                    }
+                } else {
+                    csvFileSelect.innerHTML = '<option value="">沒有可用的CSV檔案</option>';
+                }
+            } catch (error) {
+                console.error('載入CSV檔案列表失敗:', error);
+                const csvFileSelect = document.getElementById('csvFileSelect');
+                if (csvFileSelect) {
+                    csvFileSelect.innerHTML = '<option value="">載入失敗</option>';
+                }
+            }
+        }
+
+        // CSV檔案選擇變更事件（需要在DOM準備好後綁定，使用事件委派避免重複綁定）
+        function bindCSVFileSelectEvent() {
+            const csvFileSelect = document.getElementById('csvFileSelect');
+            if (csvFileSelect && !csvFileSelect.hasAttribute('data-event-bound')) {
+                csvFileSelect.setAttribute('data-event-bound', 'true');
+                csvFileSelect.addEventListener('change', async (e) => {
+                    const selectedFilename = e.target.value;
+                    if (selectedFilename) {
+                        await loadCSVData(selectedFilename);
+                    }
+                });
+            }
+        }
+
+        // 儲存當前載入的CSV檔案名稱（用於下載）
+        let currentSummaryFilename = null;
+        let currentDetailsFilename = null;
+
+        // 從CSV數據更新統計資料
+        function updateStatsFromCSV(summaryData) {
+            if (!summaryData || summaryData.length === 0) {
+                document.getElementById('totalReceipts').textContent = '0';
+                document.getElementById('totalAmount').textContent = '¥0';
+                document.getElementById('avgConfidence').textContent = '0%';
+                statsSection.style.display = 'grid';
+                return;
+            }
+
+            // 計算總收據數
+            const totalReceipts = summaryData.length;
+            document.getElementById('totalReceipts').textContent = totalReceipts;
+
+            // 計算總金額
+            const totalAmount = summaryData.reduce((sum, row) => {
+                const amount = parseFloat(row['總金額'] || 0);
+                return sum + (isNaN(amount) ? 0 : amount);
+            }, 0);
+            document.getElementById('totalAmount').textContent = `¥${totalAmount.toLocaleString()}`;
+
+            // 計算平均信心度
+            const confidenceScores = summaryData
+                .map(row => parseFloat(row['識別信心度'] || 0))
+                .filter(score => !isNaN(score) && score > 0);
+            
+            if (confidenceScores.length > 0) {
+                const avgConfidence = confidenceScores.reduce((sum, score) => sum + score, 0) / confidenceScores.length;
+                document.getElementById('avgConfidence').textContent = `${(avgConfidence * 100).toFixed(0)}%`;
+            } else {
+                document.getElementById('avgConfidence').textContent = '0%';
+            }
+
+            // 顯示統計區域
+            statsSection.style.display = 'grid';
+        }
+
+        // 載入指定CSV檔案數據
+        async function loadCSVData(filename) {
+            try {
+                showLoading(true);
+                const response = await fetch(`/csv-data/${encodeURIComponent(filename)}`);
+                const result = await response.json();
+                
+                if (!result.success || !result.summary_data || result.summary_data.length === 0) {
+                    showError('沒有找到CSV資料');
+                    return;
+                }
+
+                // 儲存當前檔案名稱（用於下載）
+                currentSummaryFilename = result.summary_filename;
+                currentDetailsFilename = result.details_filename;
+
+                resultSection.style.display = 'block';
+                
+                // 顯示圖表
+                showAmountChart(result.summary_data);
+                
+                // 顯示摘要表格
+                showSummaryTable(result.summary_data);
+                
+                // 顯示明細表格
+                showDetailsTable(result.details_data || []);
+                
+                // 從CSV數據更新統計資料
+                updateStatsFromCSV(result.summary_data);
+                
+                if (result.deleted_images_count > 0) {
+                    showSuccess(`已清理 ${result.deleted_images_count} 個已處理的圖片檔案`);
+                }
+                
+            } catch (error) {
+                console.error('載入CSV資料失敗:', error);
+                showError('載入CSV資料失敗: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // CSV下載按鈕事件（需要在DOM準備好後綁定）
+        function bindDownloadCSVEvent() {
+            const downloadCSVBtn = document.getElementById('downloadCSVBtn');
+            if (downloadCSVBtn && !downloadCSVBtn.hasAttribute('data-event-bound')) {
+                downloadCSVBtn.setAttribute('data-event-bound', 'true');
+                downloadCSVBtn.addEventListener('click', async () => {
+                    if (!currentSummaryFilename) {
+                        showError('沒有可下載的CSV檔案');
+                        return;
+                    }
+
+                    try {
+                        // 下載摘要CSV
+                        const summaryLink = document.createElement('a');
+                        summaryLink.href = `/download/${encodeURIComponent(currentSummaryFilename)}`;
+                        summaryLink.download = currentSummaryFilename;
+                        document.body.appendChild(summaryLink);
+                        summaryLink.click();
+                        document.body.removeChild(summaryLink);
+
+                        // 稍微延遲後下載明細CSV
+                        setTimeout(() => {
+                            if (currentDetailsFilename) {
+                                const detailsLink = document.createElement('a');
+                                detailsLink.href = `/download/${encodeURIComponent(currentDetailsFilename)}`;
+                                detailsLink.download = currentDetailsFilename;
+                                document.body.appendChild(detailsLink);
+                                detailsLink.click();
+                                document.body.removeChild(detailsLink);
+                                showSuccess('CSV檔案下載完成！');
+                            }
+                        }, 300);
+                    } catch (error) {
+                        console.error('下載CSV失敗:', error);
+                        showError('下載CSV失敗: ' + error.message);
+                    }
+                });
+            }
+        }
+
+        // 顯示CSV數據結果（載入最新的）
+        async function showCSVResults() {
+            // 重新載入CSV檔案列表（確保包含最新的）
+            await loadCSVFilesList();
+        }
+
+        // 顯示金額趨勢圖
+        function showAmountChart(summaryData) {
+            const ctx = document.getElementById('amountChart');
+            if (!ctx) {
+                console.error('找不到amountChart元素');
+                return;
+            }
+            
+            // 銷毀舊圖表
+            if (amountChart) {
+                amountChart.destroy();
+                amountChart = null;
+            }
+
+            // 準備數據
+            const labels = summaryData.map((row, index) => {
+                // 嘗試解析日期
+                const dateStr = row['日期'] || row['收據日期'] || `收據 ${index + 1}`;
                 try {
                     const date = new Date(dateStr);
-                    return date.toLocaleString('zh-TW', {
-                        year: 'numeric',
-                        month: '2-digit',
-                        day: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                    });
+                    return date.toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit' });
                 } catch {
-                    return dateStr;
+                    return dateStr.substring(0, 10);
                 }
-            };
-
-            // 格式化商品列表
-            const formatItems = (items) => {
-                if (!items || items.length === 0) return '無商品明細';
-                return items.map(item => {
-                    let itemDisplay = `${item.name}`;
-                    
-                    // 如果有日文原名，顯示在括號中
-                    if (item.name_japanese && item.name_japanese !== item.name) {
-                        itemDisplay += ` (${item.name_japanese})`;
-                    }
-                    
-                    // 如果有中文翻譯，顯示在下一行
-                    if (item.name_chinese && item.name_chinese !== item.name) {
-                        itemDisplay += `<br><small style="color: #666;">中文: ${item.name_chinese}</small>`;
-                    }
-                    
-                    // 添加稅金信息
-                    let taxInfo = '';
-                    if (item.tax_included !== undefined) {
-                        taxInfo = item.tax_included ? ' (含稅)' : ' (不含稅)';
-                    }
-                    if (item.tax_amount) {
-                        taxInfo += ` 稅額: ¥${item.tax_amount.toLocaleString()}`;
-                    }
-                    
-                    return `${itemDisplay} × ${item.quantity} = ¥${item.price.toLocaleString()}${taxInfo}`;
-                }).join('<br><br>');
-            };
-
-            const cards = [
-                {
-                    title: '🏪 商店資訊',
-                    items: [
-                        { label: '商店名稱', value: data.store_name || '未識別' },
-                        { label: '收據號碼', value: data.receipt_number || 'N/A' },
-                        { label: '付款方式', value: data.payment_method || 'N/A' }
-                    ]
-                },
-                {
-                    title: '💰 金額資訊',
-                    items: [
-                        { label: '總金額', value: `¥${data.total_amount.toLocaleString()}` },
-                        { label: '小計', value: data.subtotal ? `¥${data.subtotal.toLocaleString()}` : 'N/A' },
-                        { label: '稅額', value: data.tax_amount ? `¥${data.tax_amount.toLocaleString()}` : 'N/A' },
-                        { label: '稅金類型', value: data.tax_type || 'N/A' }
-                    ]
-                },
-                {
-                    title: '📅 日期時間',
-                    items: [
-                        { label: '日期時間', value: formatDate(data.date) },
-                        { label: '處理時間', value: `${data.processing_time.toFixed(2)}秒` },
-                        { label: '識別信心度', value: `${(data.confidence_score * 100).toFixed(1)}%` }
-                    ]
-                },
-                {
-                    title: '🛒 商品明細',
-                    items: [
-                        { label: '商品數量', value: data.items ? data.items.length + '項' : '0項' },
-                        { label: '商品列表', value: formatItems(data.items), isHtml: true }
-                    ]
-                }
-            ];
-
-            cards.forEach(card => {
-                const cardElement = document.createElement('div');
-                cardElement.className = 'result-card';
-                
-                const itemsHtml = card.items.map(item => {
-                    if (item.isHtml) {
-                        return `
-                            <div class="result-item">
-                                <span>${item.label}:</span>
-                                <div class="value-html">${item.value}</div>
-                            </div>
-                        `;
-                    } else {
-                        return `
-                            <div class="result-item">
-                                <span>${item.label}:</span>
-                                <strong>${item.value}</strong>
-                            </div>
-                        `;
-                    }
-                }).join('');
-                
-                cardElement.innerHTML = `
-                    <h3>${card.title}</h3>
-                    ${itemsHtml}
-                `;
-                resultGrid.appendChild(cardElement);
             });
+            
+            const amounts = summaryData.map(row => parseFloat(row['總金額'] || 0));
+
+            // 確保canvas元素存在
+            const chartContainer = document.getElementById('chartContainer');
+            if (!chartContainer) {
+                console.error('找不到chartContainer元素');
+                return;
+            }
+
+            // 創建圖表
+            amountChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: '總金額 (¥)',
+                        data: amounts,
+                        borderColor: 'rgb(102, 126, 234)',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 5,
+                        pointHoverRadius: 7
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    animation: {
+                        duration: 0
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: '收據金額趨勢',
+                            font: {
+                                size: 18
+                            },
+                            padding: {
+                                top: 10,
+                                bottom: 20
+                            }
+                        },
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            padding: {
+                                bottom: 10
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '¥' + value.toLocaleString();
+                                },
+                                padding: 10
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)',
+                                drawBorder: false
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                padding: 10
+                            }
+                        }
+                    },
+                    layout: {
+                        padding: {
+                            top: 10,
+                            right: 10,
+                            bottom: 10,
+                            left: 10
+                        }
+                    }
+                }
+            });
+        }
+
+        // 顯示摘要表格
+        function showSummaryTable(summaryData) {
+            const container = document.getElementById('summaryTable');
+            
+            if (!summaryData || summaryData.length === 0) {
+                container.innerHTML = '<p>沒有摘要資料</p>';
+                return;
+            }
+
+            // 獲取所有欄位名稱
+            const headers = Object.keys(summaryData[0]);
+            
+            // 建立表格
+            let tableHTML = '<table class="csv-table"><thead><tr>';
+            
+            // 表頭（只顯示重要欄位）
+            const displayHeaders = ['商店名稱', '日期', '總金額', '小計', '稅額', '付款方式'];
+            displayHeaders.forEach(header => {
+                if (headers.includes(header)) {
+                    tableHTML += `<th>${header}</th>`;
+                }
+            });
+            tableHTML += '</tr></thead><tbody>';
+
+            // 表格內容
+            summaryData.forEach(row => {
+                tableHTML += '<tr>';
+                displayHeaders.forEach(header => {
+                    if (headers.includes(header)) {
+                        let value = row[header] || '-';
+                        
+                        // 格式化金額
+                        if (header.includes('金額') || header.includes('小計') || header.includes('稅額')) {
+                            const numValue = parseFloat(value);
+                            if (!isNaN(numValue)) {
+                                value = `¥${numValue.toLocaleString()}`;
+                                tableHTML += `<td class="amount">${value}</td>`;
+                    } else {
+                                tableHTML += `<td>${value}</td>`;
+                            }
+                        } else {
+                            tableHTML += `<td>${value}</td>`;
+                        }
+                    }
+                });
+                tableHTML += '</tr>';
+            });
+
+            tableHTML += '</tbody></table>';
+            container.innerHTML = tableHTML;
+        }
+
+        // 顯示明細表格
+        function showDetailsTable(detailsData) {
+            const container = document.getElementById('detailsTable');
+            
+            if (!detailsData || detailsData.length === 0) {
+                container.innerHTML = '<p>沒有商品明細資料</p>';
+                return;
+            }
+
+            // 獲取所有欄位名稱
+            const headers = Object.keys(detailsData[0]);
+            
+            // 建立表格
+            let tableHTML = '<table class="csv-table"><thead><tr>';
+            
+            // 表頭
+            headers.forEach(header => {
+                tableHTML += `<th>${header}</th>`;
+            });
+            tableHTML += '</tr></thead><tbody>';
+
+            // 表格內容
+            detailsData.forEach(row => {
+                tableHTML += '<tr>';
+                headers.forEach(header => {
+                    let value = row[header] || '-';
+                    
+                    // 格式化數值欄位
+                    if (header.includes('單價') || header.includes('稅額') || header.includes('小計')) {
+                        const numValue = parseFloat(value);
+                        if (!isNaN(numValue)) {
+                            value = `¥${numValue.toLocaleString()}`;
+                            tableHTML += `<td class="amount">${value}</td>`;
+                        } else {
+                            tableHTML += `<td>${value}</td>`;
+                        }
+                    } else if (header.includes('數量')) {
+                        const numValue = parseFloat(value);
+                        if (!isNaN(numValue)) {
+                            tableHTML += `<td class="number">${numValue}</td>`;
+                        } else {
+                            tableHTML += `<td>${value}</td>`;
+                        }
+                    } else {
+                        tableHTML += `<td>${value}</td>`;
+                    }
+                });
+                tableHTML += '</tr>';
+            });
+
+            tableHTML += '</tbody></table>';
+            container.innerHTML = tableHTML;
         }
 
         async function updateStats() {
@@ -1275,17 +1919,174 @@
             setTimeout(() => successDiv.remove(), 3000);
         }
 
-        // 頁面載入時獲取統計資料
-        window.addEventListener('load', async () => {
+        // 載入已上傳的圖片列表
+        async function loadUploadedFiles() {
             try {
-                const response = await fetch('/summary');
-                const summary = await response.json();
-                if (summary.uploaded_receipts > 0) {
-                    updateStats();
+                const response = await fetch('/uploaded-files');
+                const result = await response.json();
+                
+                if (result.success && result.files.length > 0) {
+                    displayUploadedFiles(result.files);
+                    uploadedFilesSection.style.display = 'block';
+                } else {
+                    uploadedFilesSection.style.display = 'none';
                 }
             } catch (error) {
-                console.log('無法載入統計資料:', error);
+                console.error('載入已上傳檔案列表失敗:', error);
             }
+        }
+
+        // 顯示已上傳的圖片列表
+        function displayUploadedFiles(files) {
+            uploadedFilesGrid.innerHTML = '';
+            
+            // 如果沒有檔案，顯示提示訊息
+            if (files.length === 0) {
+                uploadedFilesGrid.innerHTML = '<p style="text-align: center; color: #6c757d; padding: 20px;">目前沒有已上傳的圖片</p>';
+                return;
+            }
+            
+            files.forEach(file => {
+                const card = document.createElement('div');
+                card.className = 'uploaded-file-card';
+                
+                const isImage = file.filename.toLowerCase().match(/\.(jpg|jpeg|png)$/);
+                const isPdf = file.filename.toLowerCase().endsWith('.pdf');
+                
+                // PDF 使用佔位符，圖片直接顯示
+                const placeholderSvg = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iI2U5ZWNlZiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiM5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5QREYg5paH5Lu2PC90ZXh0Pjwvc3ZnPg==';
+                const thumbnailSrc = isImage ? file.image_url : placeholderSvg;
+                
+                // 處理狀態標籤
+                let statusBadge = '';
+                if (file.has_ocr_cache) {
+                    statusBadge = '<span style="background: #d4edda; color: #155724; padding: 2px 6px; border-radius: 3px; font-size: 0.75em; margin-left: 5px;">✓ OCR暫存</span>';
+                }
+                
+                card.innerHTML = `
+                    <button class="uploaded-file-delete-btn" onclick="event.stopPropagation(); deleteUploadedImage('${file.filename}')" title="刪除圖片">×</button>
+                    <img src="${thumbnailSrc}" alt="${file.filename}" class="uploaded-file-thumbnail" 
+                         ${isImage ? `onerror="this.src='${placeholderSvg}'"` : ''}
+                         onclick="openImageModal('${file.image_url}')">
+                    <div class="uploaded-file-info">
+                        <div class="uploaded-file-name">${file.filename}${statusBadge}</div>
+                        <div class="uploaded-file-meta">
+                            <span>📏 ${file.size_mb} MB</span>
+                            <span>🕒 ${file.modified_time}</span>
+                        </div>
+                    </div>
+                `;
+                
+                uploadedFilesGrid.appendChild(card);
+            });
+        }
+
+        // 刪除已上傳的圖片
+        async function deleteUploadedImage(filename) {
+            if (!confirm(`確定要刪除圖片 "${filename}" 嗎？\n\n此操作將同時刪除相關的暫存檔案。`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/uploaded-image/${encodeURIComponent(filename)}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showSuccess(`已刪除圖片: ${filename}`);
+                    // 刷新已上傳檔案列表
+                    await loadUploadedFiles();
+                    // 重新檢查並啟用處理按鈕
+                    await checkAndEnableProcessButtons();
+                } else {
+                    showError('刪除失敗: ' + (result.detail || result.error || '未知錯誤'));
+                }
+            } catch (error) {
+                console.error('刪除圖片錯誤:', error);
+                showError('刪除失敗: ' + error.message);
+            }
+        }
+
+        // 打開圖片查看模態框
+        function openImageModal(imageUrl) {
+            modalImage.src = imageUrl;
+            imageModal.style.display = 'block';
+        }
+
+        // 關閉圖片查看模態框
+        imageModalClose.onclick = () => {
+            imageModal.style.display = 'none';
+        };
+
+        imageModal.onclick = (e) => {
+            if (e.target === imageModal) {
+                imageModal.style.display = 'none';
+            }
+        };
+
+        // 重新整理已上傳檔案列表
+        refreshFilesBtn.addEventListener('click', async () => {
+            refreshFilesBtn.disabled = true;
+            refreshFilesBtn.textContent = '🔄 載入中...';
+            await loadUploadedFiles();
+            // 重新檢查並啟用處理按鈕
+            await checkAndEnableProcessButtons();
+            refreshFilesBtn.disabled = false;
+            refreshFilesBtn.textContent = '🔄 重新整理';
+            showSuccess('檔案列表已更新');
+        });
+
+        // 檢查並啟用處理按鈕（如果有可處理的檔案）
+        async function checkAndEnableProcessButtons() {
+            try {
+                const response = await fetch('/uploaded-files');
+                const result = await response.json();
+                
+                if (result.success && result.files.length > 0) {
+                    // 檢查是否有可處理的檔案（未處理或OCR已完成的檔案）
+                    const processableFiles = result.files.filter(file => 
+                        file.processing_status === 'not_processed' || 
+                        file.processing_status === 'ocr_completed'
+                    );
+                    
+                    if (processableFiles.length > 0) {
+                        // 如果只有一個檔案，可以單個處理
+                        if (processableFiles.length === 1) {
+                            uploadedFilename = processableFiles[0].filename;
+                            processBtn.disabled = false;
+                            console.log('發現可處理的單個檔案:', uploadedFilename);
+                        } else {
+                            // 多個檔案，啟用批量處理
+                            uploadedFilenames = processableFiles.map(f => f.filename);
+                            processBatchBtn.disabled = false;
+                            processBatchOptimizedBtn.disabled = false;
+                            console.log('發現可處理的批量檔案:', uploadedFilenames.length, '個');
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('檢查可處理檔案失敗:', error);
+            }
+        }
+
+        // 頁面載入時獲取統計資料和已上傳檔案列表
+        window.addEventListener('load', async () => {
+            // 載入已上傳的圖片列表
+            await loadUploadedFiles();
+            
+            // 綁定CSV檔案選擇事件
+            bindCSVFileSelectEvent();
+            
+            // 綁定CSV下載按鈕事件
+            bindDownloadCSVEvent();
+            
+            // 載入CSV檔案列表（會自動載入並顯示最新數據）
+            await loadCSVFilesList();
+            
+            // 檢查並啟用處理按鈕
+            await checkAndEnableProcessButtons();
         });
     </script>
 </body>

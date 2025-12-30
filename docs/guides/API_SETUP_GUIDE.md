@@ -15,7 +15,8 @@ nano .env
 ### 3. 填入您的API金鑰
 ```env
 # Azure Computer Vision API設定
-AZURE_VISION_ENDPOINT=https://your-resource.cognitiveservices.azure.com/
+# 注意：端點URL不要包含尾隨斜線（/）
+AZURE_VISION_ENDPOINT=https://your-resource.cognitiveservices.azure.com
 AZURE_VISION_KEY=your_azure_vision_key_here
 
 # Claude API設定

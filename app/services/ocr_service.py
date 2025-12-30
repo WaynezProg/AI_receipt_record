@@ -13,7 +13,9 @@ class OCRService:
     """Azure Computer Vision OCR服務"""
 
     def __init__(self):
-        self.endpoint = settings.azure_vision_endpoint
+        # 清理端點URL：移除尾隨斜線，確保URL格式正確
+        endpoint = settings.azure_vision_endpoint.strip()
+        self.endpoint = endpoint.rstrip("/")
         self.key = settings.azure_vision_key
         self.headers = {
             "Ocp-Apim-Subscription-Key": self.key,
@@ -122,6 +124,15 @@ class OCRService:
                 )
                 # 拋出特殊的429錯誤，讓調用方知道需要等待
                 raise Exception(f"RATE_LIMIT_EXCEEDED: {error_msg}")
+            # 處理 DNS 解析錯誤（無法連接）
+            elif "NameResolutionError" in error_msg or "Failed to resolve" in error_msg or "nodename nor servname" in error_msg:
+                logger.error(f"無法連接到 Azure 端點: {self.endpoint}")
+                logger.error(f"DNS 解析失敗，請檢查：")
+                logger.error(f"  1. 端點 URL 是否正確: {self.endpoint}")
+                logger.error(f"  2. 網路連接是否正常")
+                logger.error(f"  3. Azure 資源是否已刪除或暫停")
+                logger.error(f"  4. API 金鑰是否有效")
+                raise Exception(f"CONNECTION_ERROR: 無法連接到 Azure 端點 '{self.endpoint}'。請檢查端點 URL、網路連接和 Azure 資源狀態。")
             else:
                 logger.error(f"OCR處理錯誤: {error_msg}")
                 raise

@@ -93,8 +93,18 @@ dmypy.json
 # 資料目錄
 data/receipts/*
 data/output/*
+data/cache/*
 !data/receipts/.gitkeep
 !data/output/.gitkeep
+!data/cache/.gitkeep
+
+# 增強後的圖片
+*_enhanced.jpg
+*_enhanced.png
+*_enhanced.jpeg
+
+# Azure 使用追蹤檔案
+data/output/azure_usage.json
 
 # 日誌檔案
 logs/

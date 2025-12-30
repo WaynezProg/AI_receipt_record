@@ -1,34 +1,22 @@
-# 📚 專案文檔
+# 📚 專案文檔索引
 
-## 📁 資料夾結構
+## 📁 文檔結構
 
 ```
 docs/
-├── README.md              # 本文檔
 ├── guides/                # 使用指南
-│   ├── API_SETUP_GUIDE.md
-│   ├── AZURE_COST_GUIDE.md
-│   └── USAGE.md
 ├── features/              # 功能特性
-│   ├── FILE_MANAGEMENT_SUMMARY.md
-│   ├── PERFORMANCE_OPTIMIZATION_SUMMARY.md
-│   └── TAX_FEATURES_SUMMARY.md
 ├── setup/                 # 開發設定
-│   ├── GITHUB_SETUP.md
-│   └── README_GITHUB.md
-├── fixes/                 # 修復記錄
-│   ├── README.md
-│   ├── INDEX.md
-│   └── INTEGRATED_FIXES.md
-├── OPTIMIZED_BATCH_FIX_SUMMARY.md
-└── TEST_ORGANIZATION_SUMMARY.md
+└── fixes/                 # 修復記錄
 ```
 
 ## 📋 文檔分類
 
 ### 🔧 使用指南 (`guides/`)
+- **[Azure資源建立指南](./guides/AZURE_RESOURCE_SETUP.md)** - 如何在Azure上建立Computer Vision資源並取得URL和Key
 - **[API設定指南](./guides/API_SETUP_GUIDE.md)** - 如何設定Azure和Claude API
 - **[Azure成本指南](./guides/AZURE_COST_GUIDE.md)** - 成本控制和優化建議
+- **[Azure金鑰管理](./guides/AZURE_KEY_MANAGEMENT.md)** - 如何在Azure Portal查看和管理API金鑰
 - **[使用說明](./guides/USAGE.md)** - 詳細的使用指南
 
 ### 🎯 功能特性 (`features/`)
@@ -37,42 +25,25 @@ docs/
 - **[稅金處理功能](./features/TAX_FEATURES_SUMMARY.md)** - 日本稅金識別和處理
 
 ### 🔧 開發設定 (`setup/`)
-- **[GitHub設定](./setup/GITHUB_SETUP.md)** - GitHub專案設定
-- **[GitHub README](./setup/README_GITHUB.md)** - GitHub專用說明
+- **[GitHub設定](./setup/GITHUB_SETUP.md)** - GitHub專案設定和上傳指南
 
 ### 🐛 修復記錄 (`fixes/`)
 - **[修復文檔概覽](./fixes/README.md)** - 快速了解所有修復
-- **[快速索引](./fixes/INDEX.md)** - 按問題類型查找
-- **[系統修復總結](./fixes/INTEGRATED_FIXES.md)** - 完整的修復記錄
-
-### 📄 其他文檔
-- **[批量處理修復](./OPTIMIZED_BATCH_FIX_SUMMARY.md)** - 批量處理優化
-- **[測試組織](./TEST_ORGANIZATION_SUMMARY.md)** - 測試文件組織
+- **[系統修復總結](./fixes/INTEGRATED_FIXES.md)** - 完整的修復記錄（包含詳細技術說明）
 
 ## 🎯 快速導航
 
 ### 新用戶
-1. 閱讀 **[使用說明](./guides/USAGE.md)**
-2. 設定 **[API設定指南](./guides/API_SETUP_GUIDE.md)**
-3. 了解 **[Azure成本指南](./guides/AZURE_COST_GUIDE.md)**
+1. **[Azure資源建立指南](./guides/AZURE_RESOURCE_SETUP.md)** - 在Azure上建立Computer Vision資源（**第一步**）
+2. **[API設定指南](./guides/API_SETUP_GUIDE.md)** - 設定API金鑰到.env檔案
+3. **[使用說明](./guides/USAGE.md)** - 開始使用系統
+4. **[Azure成本指南](./guides/AZURE_COST_GUIDE.md)** - 了解成本控制
 
 ### 開發者
-1. 查看 **[GitHub設定](./setup/GITHUB_SETUP.md)**
-2. 了解 **[功能特性](./features/)**
-3. 查看 **[修復記錄](./fixes/)**
-
-### 問題排查
-1. 查看 **[修復記錄](./fixes/INTEGRATED_FIXES.md)**
-2. 了解 **[性能優化](./features/PERFORMANCE_OPTIMIZATION_SUMMARY.md)**
-
-## 📊 系統狀態
-
-- ✅ 所有已知問題已修復
-- ✅ 系統運行穩定
-- ✅ 處理成功率: 100%
-- ✅ 用戶體驗良好
+1. **[GitHub設定](./setup/GITHUB_SETUP.md)** - 專案設定和上傳
+2. **[功能特性](./features/)** - 了解系統功能
+3. **[修復記錄](./fixes/)** - 查看問題修復歷史
 
 ---
 
-**最後更新**: 2025-08-17  
-**版本**: 1.0.0
+**最後更新**: 2025-12-30

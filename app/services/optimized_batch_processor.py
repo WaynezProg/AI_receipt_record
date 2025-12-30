@@ -125,8 +125,25 @@ class OptimizedBatchProcessor:
                         logger.error(f"OCR處理失敗: {error_msg}")
                         return {"success": False, "error": error_msg}
 
-    async def _process_ai_with_retry(self, ocr_result: Dict, retries: int = 2) -> Dict:
-        """帶重試的AI處理"""
+    async def _process_ai_with_retry(self, ocr_result: Dict, filename: str, retries: int = 2) -> Dict:
+        """帶重試的AI處理（檢查暫存）"""
+        # 檢查是否有AI暫存
+        ai_cache_data = cache_service.load_ai_result(filename)
+        if ai_cache_data and ai_cache_data.get("receipt_data"):
+            logger.info(f"使用AI暫存資料: {filename}")
+            # 從暫存資料恢復ReceiptData對象
+            from app.models.receipt import ReceiptData
+            receipt_dict = ai_cache_data["receipt_data"]
+            # 處理日期字串
+            if isinstance(receipt_dict.get("date"), str):
+                from datetime import datetime
+                try:
+                    receipt_dict["date"] = datetime.fromisoformat(receipt_dict["date"])
+                except:
+                    pass
+            return ReceiptData(**receipt_dict)
+        
+        # 沒有暫存，執行AI處理
         for attempt in range(retries + 1):
             try:
                 # 提取結構化資料
@@ -135,6 +152,8 @@ class OptimizedBatchProcessor:
                 result = await ai_service.process_receipt_text(
                     ocr_result, structured_data
                 )
+                # 保存到暫存
+                cache_service.save_ai_result(filename, result, ocr_result)
                 return result
 
             except Exception as e:
@@ -159,9 +178,9 @@ class OptimizedBatchProcessor:
             if not ocr_result.get("success"):
                 return {"success": False, "error": ocr_result.get("error", "OCR失敗")}
 
-            # 3. AI處理（並行控制）
-            ai_result = await self._process_ai_with_retry(ocr_result)
-            if not ai_result:
+            # 3. AI處理（並行控制，檢查暫存）
+            ai_result = await self._process_ai_with_retry(ocr_result, filename)
+            if not ai_result or (isinstance(ai_result, dict) and not ai_result.get("success", True)):
                 return {"success": False, "error": "AI處理失敗"}
 
             # 4. 處理成功後刪除圖片（如果啟用）
@@ -234,7 +253,7 @@ class OptimizedBatchProcessor:
 
                 async with claude_semaphore:
                     # AI處理
-                    ai_result = await self._process_ai_with_retry(ocr_result)
+                    ai_result = await self._process_ai_with_retry(ocr_result, filename)
                     await asyncio.sleep(self.claude_delay)
 
                     if ai_result:
