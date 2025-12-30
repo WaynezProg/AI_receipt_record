@@ -1,121 +1,123 @@
-# 📄 日本收據AI識別系統
+# 📄 Japanese Receipt AI Recognition System
 
-一個基於AI的日本收據識別和數據提取系統，能夠自動處理收據圖片並生成結構化的CSV數據。
+> 🇹🇼 [繁體中文版本](./README_zh.md) | 🇬🇧 [English Version](./README.md)
 
-## 🚀 快速開始
+An AI-based Japanese receipt recognition and data extraction system that automatically processes receipt images and generates structured CSV data.
 
-### 安裝依賴
+## 🚀 Quick Start
+
+### Install Dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-### 設定環境變數
-複製 `.env.example` 到 `.env` 並填入您的API金鑰：
+### Set Environment Variables
+Copy `.env.example` to `.env` and fill in your API keys:
 ```bash
 cp .env.example .env
 ```
 
-### 啟動服務
+### Start Service
 
-#### 方法一：使用快速啟動腳本（推薦）
+#### Method 1: Use Quick Start Script (Recommended)
 ```bash
 ./start.sh
 ```
 
-#### 方法二：使用 Python 啟動腳本
+#### Method 2: Use Python Start Script
 ```bash
 python start.py
 ```
 
-#### 啟動選項
+#### Startup Options
 ```bash
-# 使用自訂端口
+# Use custom port
 ./start.sh -p 8080
 
-# 生產模式（禁用自動重載）
+# Production mode (disable auto-reload)
 ./start.sh --prod
 
-# 查看所有選項
+# View all options
 ./start.sh --help
 ```
 
-訪問 http://localhost:8000 開始使用
+Visit http://localhost:8000 to start using
 
-## 📋 主要功能
+## 📋 Main Features
 
-- 🔍 **智能OCR識別**: 使用Azure Computer Vision API進行文字識別
-- 🤖 **AI數據提取**: 使用Claude AI進行結構化數據提取
-- 📊 **CSV輸出**: 自動生成中文標題的CSV文件
-- 🌐 **Web界面**: 友好的用戶界面，支援批量上傳
-- ⚡ **批量處理**: 支援大量圖片的高效處理
-- 💾 **快取機制**: 智能快取，避免重複處理
-- 🗑️ **檔案管理**: 自動清理已處理的圖片，支援手動刪除
+- 🔍 **Smart OCR Recognition**: Uses Azure Computer Vision API for text recognition
+- 🤖 **AI Data Extraction**: Uses Claude AI for structured data extraction
+- 📊 **CSV Output**: Automatically generates CSV files with Chinese headers
+- 🌐 **Web Interface**: User-friendly interface with batch upload support
+- ⚡ **Batch Processing**: Efficient processing of large image volumes
+- 💾 **Caching Mechanism**: Smart caching to avoid duplicate processing
+- 🗑️ **File Management**: Automatic cleanup of processed images, supports manual deletion
 
-## 📚 文檔
+## 📚 Documentation
 
-### 🔧 使用指南
-- **[Azure資源建立指南](./docs/guides/AZURE_RESOURCE_SETUP.md)** - 如何在Azure上建立Computer Vision資源並取得URL和Key（**新用戶必讀**）
-- **[API設定指南](./docs/guides/API_SETUP_GUIDE.md)** - 如何設定Azure和Claude API
-- **[Azure成本指南](./docs/guides/AZURE_COST_GUIDE.md)** - 成本控制和優化建議
-- **[Azure金鑰管理](./docs/guides/AZURE_KEY_MANAGEMENT.md)** - 如何在Azure Portal查看和管理API金鑰
-- **[使用說明](./docs/guides/USAGE.md)** - 詳細的使用指南
+### 🔧 User Guides
+- **[Azure Resource Setup Guide](./docs/guides/AZURE_RESOURCE_SETUP.md)** - How to create Computer Vision resource on Azure and obtain URL and Key (**Required for new users**)
+- **[API Setup Guide](./docs/guides/API_SETUP_GUIDE.md)** - How to configure Azure and Claude API
+- **[Azure Cost Guide](./docs/guides/AZURE_COST_GUIDE.md)** - Cost control and optimization recommendations
+- **[Azure Key Management](./docs/guides/AZURE_KEY_MANAGEMENT.md)** - How to view and manage API keys in Azure Portal
+- **[Usage Guide](./docs/guides/USAGE.md)** - Detailed usage instructions
 
-### 🎯 功能特性
-- **[檔案管理功能](./docs/features/FILE_MANAGEMENT_SUMMARY.md)** - 自動檔案清理和管理
-- **[性能優化](./docs/features/PERFORMANCE_OPTIMIZATION_SUMMARY.md)** - 系統性能優化詳情
-- **[稅金處理功能](./docs/features/TAX_FEATURES_SUMMARY.md)** - 日本稅金識別和處理
+### 🎯 Feature Documentation
+- **[File Management Features](./docs/features/FILE_MANAGEMENT_SUMMARY.md)** - Automatic file cleanup and management
+- **[Performance Optimization](./docs/features/PERFORMANCE_OPTIMIZATION_SUMMARY.md)** - System performance optimization details
+- **[Tax Features](./docs/features/TAX_FEATURES_SUMMARY.md)** - Japanese tax recognition and processing
 
-### 🔧 開發設定
-- **[GitHub設定](./docs/setup/GITHUB_SETUP.md)** - GitHub專案設定和上傳指南
+### 🔧 Development Setup
+- **[GitHub Setup](./docs/setup/GITHUB_SETUP.md)** - GitHub project setup and upload guide
 
-### 🐛 修復記錄
-- **[修復文檔概覽](./docs/fixes/README.md)** - 快速了解所有修復
-- **[系統修復總結](./docs/fixes/INTEGRATED_FIXES.md)** - 所有問題修復記錄（包含詳細技術說明）
+### 🐛 Fix Records
+- **[Fix Documentation Overview](./docs/fixes/README.md)** - Quick overview of all fixes
+- **[System Fix Summary](./docs/fixes/INTEGRATED_FIXES.md)** - All issue fix records (with detailed technical explanations)
 
-## 🏗️ 系統架構
+## 🏗️ System Architecture
 
 ```
 receipt_record/
-├── app/                    # 主要應用程式
-│   ├── main.py            # FastAPI主程式
-│   ├── config.py          # 設定管理
-│   ├── models/            # 數據模型
-│   ├── services/          # 核心服務
-│   └── utils/             # 工具函數
-├── static/                # 前端文件
-├── data/                  # 數據目錄
-│   ├── receipts/          # 收據圖片
-│   ├── output/            # CSV輸出
-│   └── cache/             # 快取文件
-├── tests/                 # 測試文件
-└── docs/                  # 文檔目錄
+├── app/                    # Main application
+│   ├── main.py            # FastAPI main program
+│   ├── config.py          # Configuration management
+│   ├── models/            # Data models
+│   ├── services/          # Core services
+│   └── utils/             # Utility functions
+├── static/                # Frontend files
+├── data/                  # Data directory
+│   ├── receipts/          # Receipt images
+│   ├── output/            # CSV output
+│   └── cache/             # Cache files
+├── tests/                 # Test files
+└── docs/                  # Documentation directory
 ```
 
-## 🔧 技術棧
+## 🔧 Tech Stack
 
-- **後端**: FastAPI, Python 3.8+
-- **AI服務**: Azure Computer Vision, Claude 3.5 Sonnet
-- **前端**: HTML, JavaScript
-- **數據處理**: Pandas, CSV
-- **圖片處理**: Pillow, OpenCV
+- **Backend**: FastAPI, Python 3.8+
+- **AI Services**: Azure Computer Vision, Claude 3.5 Sonnet
+- **Frontend**: HTML, JavaScript
+- **Data Processing**: Pandas, CSV
+- **Image Processing**: Pillow, OpenCV
 
-## 📊 系統狀態
+## 📊 System Status
 
-- ✅ 所有已知問題已修復
-- ✅ 系統運行穩定
-- ✅ 處理成功率: 100%
-- ✅ 支援批量處理
-- ✅ 智能快取機制
+- ✅ All known issues fixed
+- ✅ System running stably
+- ✅ Processing success rate: 100%
+- ✅ Supports batch processing
+- ✅ Smart caching mechanism
 
-## 🤝 貢獻
+## 🤝 Contributing
 
-歡迎提交Issue和Pull Request！
+Welcome to submit Issues and Pull Requests!
 
-## 📄 授權
+## 📄 License
 
 MIT License
 
 ---
 
-**最後更新**: 2025-12-30  
-**版本**: 1.1.0
+**Last Updated**: 2025-12-30  
+**Version**: 1.1.0
