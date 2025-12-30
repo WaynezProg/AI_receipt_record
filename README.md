@@ -6,7 +6,7 @@
 
 > 🇹🇼 [繁體中文版本](./README_zh.md) | 🇬🇧 [English Version](./README.md)
 
-An AI-based Japanese receipt recognition and data extraction system that automatically processes receipt images and generates structured CSV data. It uses Azure Computer Vision API for text recognition and Claude AI for structured data extraction.
+An AI-based Japanese receipt recognition and data extraction system that automatically processes receipt images and generates structured CSV data. It integrates **Azure Computer Vision API** for text recognition and **Claude 4.5 Sonnet** for intelligent structured data extraction.
 
 ## 🚀 Quick Start
 
@@ -47,15 +47,15 @@ python start.py
 
 Visit http://localhost:8000 to start using
 
-## 📋 Main Features
+## 📋 Core Features
 
-- 🔍 **Smart OCR Recognition**: Uses Azure Computer Vision API for text recognition
-- 🤖 **AI Data Extraction**: Uses Claude AI for structured data extraction
-- 📊 **CSV Output**: Automatically generates CSV files with Chinese headers
-- 🌐 **Web Interface**: User-friendly interface with batch upload support
-- ⚡ **Batch Processing**: Efficient processing of large image volumes
-- 💾 **Caching Mechanism**: Smart caching to avoid duplicate processing
-- 🗑️ **File Management**: Automatic cleanup of processed images, supports manual deletion
+- **OCR Text Recognition**: Uses Azure Computer Vision API for high-accuracy text extraction from receipt images
+- **AI Data Extraction**: Uses Claude 4.5 Sonnet for intelligent structured data extraction and parsing
+- **CSV Export**: Automatically generates CSV files with Chinese headers (summary and detailed reports)
+- **Batch Processing**: Supports single file, multiple files, or folder batch processing
+- **Smart Caching**: OCR and AI result caching, supports resume from interruption to save API costs
+- **File Management**: Automatic cleanup of processed images, supports manual deletion
+- **Web Interface**: User-friendly interface with real-time progress tracking and result visualization
 
 ## 📚 Documentation
 
@@ -100,18 +100,35 @@ receipt_record/
 ## 🔧 Tech Stack
 
 - **Backend**: FastAPI, Python 3.8+
-- **AI Services**: Azure Computer Vision, Claude 3.5 Sonnet
+- **AI Services**: Azure Computer Vision, Claude 4.5 Sonnet
 - **Frontend**: HTML, JavaScript
 - **Data Processing**: Pandas, CSV
 - **Image Processing**: Pillow, OpenCV
 
-## 📊 System Status
+## ⚡ Technical Highlights
 
-- ✅ All known issues fixed
-- ✅ System running stably
-- ✅ Processing success rate: 100%
-- ✅ Supports batch processing
-- ✅ Smart caching mechanism
+### 🔗 Integrated AI Services
+- **Azure Computer Vision**: High-accuracy OCR text recognition
+- **Claude 4.5 Sonnet**: Advanced AI for structured data extraction and intelligent parsing
+
+### 🚀 Performance & Reliability
+- **FastAPI Backend**: High-performance async framework with automatic API documentation
+- **Smart Caching**: OCR and AI result caching, supports resume from interruption
+- **File Management**: Automatic cleanup of processed images, supports manual deletion
+- **Performance Optimization**: Parallel processing control, API rate limit management
+
+### 💡 Key Features
+- **Intelligent Caching**: Avoid duplicate processing, save API costs
+- **Batch Processing**: Efficient handling of large image volumes
+- **Error Recovery**: Resume processing from cache after interruption
+- **Production Ready**: Supports production mode with optimized settings
+
+## 🎯 Use Cases
+
+- **Personal Finance Management**: Daily receipt organization and expense tracking
+- **Business Invoice Processing**: Batch invoice processing and data analysis for enterprises
+- **Accounting & Auditing**: Automated receipt processing and financial record keeping
+- **Tax Preparation**: Automatic extraction of tax-related information from receipts
 
 ## 🤝 Contributing
 
